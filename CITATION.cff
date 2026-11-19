@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+title: "Digital Twin of a 3D-Printed Four-Stage Axial-Flow Compressor"
+authors:
+  - family-names: Naved
+    given-names: Mohammad Inshal
+    affiliation: "King Fahd University of Petroleum & Minerals"
+  - family-names: Khalid
+    given-names: Muhammad Salman
+    affiliation: "King Fahd University of Petroleum & Minerals"
+date-released: 2026-11-19
+license: MIT
+keywords: [digital twin, axial compressor, proper orthogonal decomposition, reduced-order model, Kalman filter, 3D printing]

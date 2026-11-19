@@ -1,0 +1,289 @@
+<header class="topbar">
+  <div class="brand">
+    <h1>Four-Stage Compressor Twin</h1>
+    <span class="sub">AE 541 · 3D-printed PLA axial compressor · design PR 1.12 at 20,000 rpm · ROM C4-v2</span>
+  </div>
+  <nav class="tabs" aria-label="Sections">
+    <a href="#twin" data-view="twin">Live twin</a>
+    <a href="#compare" data-view="compare">Design &amp; data</a>
+    <a href="#log" data-view="log">Experiment log</a>
+    <a href="#checklist" data-view="checklist">Lab checklist</a>
+    <a href="#rom" data-view="rom">ROM &amp; validation</a>
+    <a href="#report" data-view="report">Report pack</a>
+  </nav>
+  <div class="status">
+    <span id="src-chip" class="chip info">Virtual rig</span>
+    <span class="mono" id="clock">t = 0.0 s</span>
+    <button class="btn sm" id="run-btn" type="button">Pause</button>
+  </div>
+</header>
+
+<div class="legend" aria-label="Value provenance">
+  <span><span class="tag meas">MEAS</span> measured on the rig (uploaded log)</span>
+  <span><span class="tag sim">SIM</span> simulated measurement from the virtual rig</span>
+  <span><span class="tag est">EST</span> estimated by the ROM, the motor model or the Kalman filter</span>
+  <span><span class="tag des">DES</span> design calculation</span>
+</div>
+
+<!-- ============================================================== LIVE TWIN -->
+<section class="view" id="view-twin">
+  <div class="grid-main">
+    <div class="stack">
+      <div class="card">
+        <div class="card-h">
+          <h2>Compressor: meridional section and mean-line cascade</h2>
+          <div class="tools">
+            <span class="small muted">Field</span>
+            <div class="seg" id="field-seg" role="group" aria-label="Colour field">
+              <button type="button" data-f="P0" aria-pressed="true">Total pressure</button>
+              <button type="button" data-f="T0" aria-pressed="false">Total temperature</button>
+              <button type="button" data-f="p" aria-pressed="false">Static pressure</button>
+              <button type="button" data-f="Ca" aria-pressed="false">Axial velocity</button>
+            </div>
+            <span class="small muted">Time</span>
+            <div class="seg" id="speed-seg" role="group" aria-label="Simulation speed">
+              <button type="button" data-s="1" aria-pressed="true">×1</button>
+              <button type="button" data-s="10" aria-pressed="false">×10</button>
+              <button type="button" data-s="60" aria-pressed="false">×60</button>
+            </div>
+            <button class="btn sm" type="button" data-export-fig="sim">PNG</button>
+          </div>
+        </div>
+        <div class="sim-wrap">
+          <canvas id="sim" aria-label="Animated compressor simulation"></canvas>
+          <div class="sim-banner" id="sim-banner"></div>
+        </div>
+        <p class="sim-note">Upper panel: half section (radial scale enlarged 2.3×), coloured by the ROM's station field; tracers move with the local axial velocity, slowed 2000×. Lower panel: blade-to-blade view at mean radius; rotor blades move at blade speed U and tracers follow the absolute velocity (C<sub>a</sub>, C<sub>u</sub>) from the velocity triangles. Everything drawn is <span class="tag est">EST</span> at the measured speed, inlet state and valve setting.</p>
+        <div class="kpis" id="kpis"></div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <div class="card-h"><h2>Operating inputs</h2><span class="chip info" id="mode-chip">Manual speed</span></div>
+        <div class="ctl">
+          <div>
+            <label for="src">Data source</label>
+            <select id="src">
+              <option value="rig">Virtual rig: simulated measurements</option>
+              <option value="replay">Replay an uploaded dataset</option>
+            </select>
+            <p class="small faint" id="src-note" style="margin-top:4px">The virtual rig reproduces the sensors (2 × PT100, 2 × LPS33HW, VESC telemetry) with noise and lag. Live hardware streams through the local Python twin over MQTT; upload its log under Design &amp; data.</p>
+          </div>
+          <div>
+            <label>Control mode</label>
+            <div class="seg" id="mode-seg" role="group" aria-label="Control mode">
+              <button type="button" data-m="manual" aria-pressed="true">Motor speed</button>
+              <button type="button" data-m="auto" aria-pressed="false">Hold pressure ratio</button>
+            </div>
+          </div>
+          <div id="ctl-manual">
+            <label for="in-n">Motor speed command</label>
+            <div class="row"><input type="range" id="in-n" min="0" max="24000" step="100" value="15000"><span class="val" id="v-n">15,000 rpm</span></div>
+          </div>
+          <div id="ctl-auto" hidden>
+            <label for="in-pr">Pressure-ratio set point</label>
+            <div class="row"><input type="range" id="in-pr" min="1.010" max="1.150" step="0.001" value="1.100"><span class="val" id="v-pr">1.100</span></div>
+          </div>
+          <div>
+            <label for="in-ta">Inlet (ambient) temperature</label>
+            <div class="row"><input type="range" id="in-ta" min="5" max="45" step="0.5" value="15"><span class="val" id="v-ta">15.0 °C</span></div>
+          </div>
+          <div>
+            <label for="in-pa">Inlet (ambient) pressure</label>
+            <div class="row"><input type="range" id="in-pa" min="90" max="105" step="0.05" value="101.325"><span class="val" id="v-pa">101.33 kPa</span></div>
+          </div>
+          <div>
+            <label for="in-phi">Load: outlet-valve opening (100 % = design area; closing raises load)</label>
+            <div class="row"><input type="range" id="in-phi" min="0.90" max="1.60" step="0.01" value="1.00"><span class="val" id="v-phi">100 %</span></div>
+          </div>
+          <hr class="sep">
+          <div>
+            <label for="fault">Fault injection (virtual rig only)</label>
+            <select id="fault">
+              <option value="none">None (healthy rig)</option>
+              <option value="erosion">Blade erosion or tip-clearance growth</option>
+              <option value="blockage">Inlet blockage (mesh over bellmouth)</option>
+              <option value="pbias">Outlet pressure-sensor offset</option>
+              <option value="rtd">Outlet RTD drift</option>
+              <option value="sag">Motor speed sag (supply drop)</option>
+              <option value="bearing">Bearing friction rise</option>
+            </select>
+            <div class="row" style="margin-top:6px"><input type="range" id="in-sev" min="0" max="1" step="0.05" value="0.5" aria-label="Fault severity"><span class="val" id="v-sev">50 %</span></div>
+          </div>
+          <div class="row" style="flex-wrap:wrap">
+            <label class="row small" style="margin:0;color:var(--ink-2)"><input type="checkbox" id="bellmouth"> Bellmouth flow tap fitted (measures ṁ)</label>
+          </div>
+          <div class="row" style="flex-wrap:wrap;gap:6px">
+            <button class="btn" type="button" id="btn-baseline">Set healthy baseline</button>
+            <button class="btn" type="button" id="btn-reset">Reset rig</button>
+            <button class="btn primary" type="button" id="btn-logpt">Log this point</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Deviation and anomalies</h2><span class="chip ok" id="anom-chip">Nominal</span></div>
+        <div class="dev-wrap"><table class="dev" id="dev-table" aria-label="Measured versus expected">
+          <thead><tr><th>Channel</th><th><span class="tag est">EST</span></th><th id="dev-src-h"><span class="tag sim">SIM</span></th><th>Δ</th><th>z</th><th>CUSUM</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div class="health" id="health"></div>
+        <div class="alarms" id="alarms"></div>
+        <p class="small faint" style="margin-top:8px">Expected values use the healthy baseline. z = deviation / combined sensor-and-model uncertainty; CUSUM accumulates persistent residuals (κ = 0.5, alarm at h = 8). The Kalman filter tracks two health factors: pressure rise h<sub>p</sub> and temperature rise h<sub>T</sub>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="charts" id="live-charts">
+    <div class="chart-card"><div class="card-h"><h3>Pressure ratio</h3><button class="btn sm" type="button" data-export-fig="c-pr">PNG</button></div><canvas id="c-pr"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Rotational speed</h3><button class="btn sm" type="button" data-export-fig="c-n">PNG</button></div><canvas id="c-n"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Temperatures</h3><button class="btn sm" type="button" data-export-fig="c-t">PNG</button></div><canvas id="c-t"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Motor power and current</h3><button class="btn sm" type="button" data-export-fig="c-p">PNG</button></div><canvas id="c-p"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Compressor map</h3><button class="btn sm" type="button" data-export-fig="c-map">PNG</button></div><canvas id="c-map"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Axial distribution through the stages</h3><button class="btn sm" type="button" data-export-fig="c-ax">PNG</button></div><canvas id="c-ax"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Velocity triangles at mean radius</h3>
+      <div class="tools"><select id="tri-stage" aria-label="Stage" style="width:auto"><option value="0">Stage 1</option><option value="1">Stage 2</option><option value="2">Stage 3</option><option value="3">Stage 4</option></select>
+      <button class="btn sm" type="button" data-export-fig="c-tri">PNG</button></div></div><canvas id="c-tri"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Kalman-filter health factors</h3><button class="btn sm" type="button" data-export-fig="c-kf">PNG</button></div><canvas id="c-kf"></canvas></div>
+  </div>
+</section>
+
+<!-- ============================================================== DESIGN & DATA -->
+<section class="view" id="view-compare">
+  <div class="two">
+    <div class="card">
+      <div class="card-h"><h2>Design reference</h2>
+        <div class="tools"><button class="btn sm" type="button" id="design-upload-btn">Upload JSON or CSV</button><input type="file" id="design-file" accept=".json,.csv,.txt" hidden>
+        <button class="btn sm primary" type="button" id="design-save">Save</button></div></div>
+      <p class="note" style="margin-bottom:10px">Values from the design calculation (inlet 15 °C, 101.325 kPa). Edit them if the design changes. The ROM itself is trained for this geometry; editing these values changes the design column used in comparisons, not the ROM.</p>
+      <div class="form-grid" id="design-form"></div>
+      <p class="small faint" id="design-status" style="margin-top:8px"></p>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Current operating point</h2><div class="tools"><button class="btn sm" type="button" data-export-tbl="op">Export table</button></div></div>
+      <div class="tbl-wrap"><table class="t" id="op-table"></table></div>
+      <p class="small faint" style="margin-top:8px">The design column applies at the design point (20,000 rpm, valve 100 %, 15 °C). The expected column is the ROM at the current speed, valve and inlet state.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="card-h"><h2>Sensor data</h2>
+      <div class="tools">
+        <button class="btn sm" type="button" id="tpl-btn">CSV template</button>
+        <button class="btn sm" type="button" id="example-btn">Generate example log (simulated)</button>
+      </div></div>
+    <div class="drop" id="drop">
+      <p><b>Drop a CSV log here</b> or <button class="btn sm" type="button" id="pick-btn">choose a file</button><input type="file" id="csv-file" accept=".csv,.txt" hidden></p>
+      <p class="small" style="margin-top:6px">Columns recognised: time_s, rpm, T_amb_C, P_amb_kPa, T_out_C, P_out_kPa (total) or p_out_static_kPa, I_batt_A, V_batt_V, mdot_kg_s, valve_pct. Header names are matched loosely.</p>
+      <div class="row" style="justify-content:center;margin-top:8px;gap:12px;flex-wrap:wrap">
+        <label class="row small" style="margin:0"><input type="radio" name="kind" value="measured" checked> Measured on the rig</label>
+        <label class="row small" style="margin:0"><input type="radio" name="kind" value="simulated"> Simulated or synthetic</label>
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px;flex-wrap:wrap;gap:8px">
+      <label for="ds-select" class="small muted" style="margin:0">Dataset</label>
+      <select id="ds-select" style="width:auto;min-width:240px"></select>
+      <button class="btn sm" type="button" id="ds-replay">Replay in live twin</button>
+      <button class="btn sm danger" type="button" id="ds-delete">Delete dataset</button>
+      <span class="small faint" id="ds-info"></span>
+    </div>
+    <div class="charts" id="ds-charts">
+      <div class="chart-card"><div class="card-h"><h3>Pressure ratio: measured vs expected</h3><button class="btn sm" type="button" data-export-fig="d-pr">PNG</button></div><canvas id="d-pr"></canvas></div>
+      <div class="chart-card"><div class="card-h"><h3>Outlet temperature: measured vs expected</h3><button class="btn sm" type="button" data-export-fig="d-t">PNG</button></div><canvas id="d-t"></canvas></div>
+      <div class="chart-card"><div class="card-h"><h3>Parity: pressure ratio</h3><button class="btn sm" type="button" data-export-fig="d-par">PNG</button></div><canvas id="d-par"></canvas></div>
+      <div class="chart-card"><div class="card-h"><h3>Battery current: measured vs expected</h3><button class="btn sm" type="button" data-export-fig="d-i">PNG</button></div><canvas id="d-i"></canvas></div>
+    </div>
+    <div class="card-h" style="margin-top:14px"><h2>Agreement metrics</h2><button class="btn sm" type="button" data-export-tbl="dsm">Export table</button></div>
+    <div class="tbl-wrap"><table class="t" id="dsm-table"></table></div>
+  </div>
+</section>
+
+<!-- ============================================================== LOG -->
+<section class="view" id="view-log">
+  <div class="card">
+    <div class="card-h"><h2>Experiment log</h2>
+      <div class="tools"><button class="btn sm" type="button" data-export-tbl="log">Export table</button></div></div>
+    <form id="log-form" class="form-grid" autocomplete="off">
+      <div><label for="lg-test">Test ID</label><input type="text" id="lg-test" placeholder="e.g. T-012"></div>
+      <div><label for="lg-op">Operator</label><input type="text" id="lg-op" placeholder="Name"></div>
+      <div><label for="lg-n">Speed (rpm)</label><input type="number" id="lg-n" step="10"></div>
+      <div><label for="lg-phi">Valve opening (%)</label><input type="number" id="lg-phi" step="1"></div>
+      <div><label for="lg-ta">T_amb (°C)</label><input type="number" id="lg-ta" step="0.1"></div>
+      <div><label for="lg-pa">P_amb (kPa)</label><input type="number" id="lg-pa" step="0.01"></div>
+      <div><label for="lg-pr">PR measured</label><input type="number" id="lg-pr" step="0.0001"></div>
+      <div><label for="lg-to">T_out measured (°C)</label><input type="number" id="lg-to" step="0.01"></div>
+      <div><label for="lg-i">I_batt measured (A)</label><input type="number" id="lg-i" step="0.1"></div>
+      <div><label for="lg-src">Source</label><select id="lg-src"><option value="measured">Measured on rig</option><option value="simulated">Virtual rig (simulated)</option></select></div>
+      <div style="grid-column:1/-1"><label for="lg-notes">Notes</label><textarea id="lg-notes" placeholder="Set-up, observations, anomalies"></textarea></div>
+      <div class="row" style="grid-column:1/-1;gap:8px;flex-wrap:wrap">
+        <button class="btn" type="button" id="lg-fill">Fill from live twin</button>
+        <button class="btn primary" type="submit">Add entry</button>
+        <span class="small faint" id="lg-status"></span>
+      </div>
+    </form>
+    <div class="tbl-wrap" style="margin-top:14px"><table class="t" id="log-table"></table></div>
+  </div>
+</section>
+
+<!-- ============================================================== CHECKLIST -->
+<section class="view" id="view-checklist">
+  <div class="card">
+    <div class="card-h"><h2>Lab components</h2>
+      <div class="tools"><span class="small muted" id="ck-sum"></span><button class="btn sm" type="button" data-export-tbl="ck">Export table</button></div></div>
+    <div class="progress" aria-hidden="true"><i id="ck-bar" style="width:0%"></i></div>
+    <div class="tbl-wrap" style="margin-top:12px"><table class="t" id="ck-table"></table></div>
+    <form id="ck-form" class="form-grid" style="margin-top:14px" autocomplete="off">
+      <div><label for="ck-item">Component</label><input type="text" id="ck-item" required></div>
+      <div><label for="ck-spec">Specification</label><input type="text" id="ck-spec"></div>
+      <div><label for="ck-qty">Qty</label><input type="number" id="ck-qty" min="1" value="1"></div>
+      <div><label for="ck-cost">Unit cost (USD)</label><input type="number" id="ck-cost" step="0.01"></div>
+      <div><label for="ck-cat">Category</label><select id="ck-cat"><option>Drive</option><option>Sensing</option><option>Electronics</option><option>Mechanical</option><option>Safety</option><option>Calibration</option></select></div>
+      <div class="row" style="align-self:end"><button class="btn primary" type="submit">Add component</button></div>
+    </form>
+  </div>
+</section>
+
+<!-- ============================================================== ROM -->
+<section class="view" id="view-rom">
+  <div class="two">
+    <div class="card">
+      <div class="card-h"><h2>How the ROM is built</h2></div>
+      <div class="steps" id="rom-steps"></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Held-out test (15 Latin-hypercube points)</h2><button class="btn sm" type="button" data-export-tbl="romv">Export table</button></div>
+      <div class="tbl-wrap"><table class="t" id="romv-table"></table></div>
+      <p class="note" style="margin-top:10px" id="rom-note"></p>
+    </div>
+  </div>
+  <div class="charts">
+    <div class="chart-card"><div class="card-h"><h3>POD spectrum</h3><button class="btn sm" type="button" data-export-fig="r-sv">PNG</button></div><canvas id="r-sv"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Model order: basis vs ROM error</h3><button class="btn sm" type="button" data-export-fig="r-sw">PNG</button></div><canvas id="r-sw"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>POD modes (total-pressure group)</h3><button class="btn sm" type="button" data-export-fig="r-md">PNG</button></div><canvas id="r-md"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Parity on test points: pressure ratio</h3><button class="btn sm" type="button" data-export-fig="r-par">PNG</button></div><canvas id="r-par"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Design of experiments</h3><button class="btn sm" type="button" data-export-fig="r-doe">PNG</button></div><canvas id="r-doe"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Casing thermal ROM: held-out run</h3><button class="btn sm" type="button" data-export-fig="r-th">PNG</button></div><canvas id="r-th"></canvas></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="card-h"><h2>Related work</h2></div>
+    <p class="note"><b>Y. Su and X. Chen, “Real-time simulation and abnormal condition recognition of series compressor system based on digital twin,” <i>Digital Engineering</i>, vol. 7, 100059, 2025.</b> doi:10.1016/j.dte.2025.100059. <a href="https://doi.org/10.1016/j.dte.2025.100059" target="_blank" rel="noopener">Open the paper</a></p>
+    <p class="note" style="margin-top:8px">Like this project, they build a compressor twin on a physics model (lumped mass, momentum and energy conservation) and set its boundary conditions from sensors at 8 Hz. They validate it on a real rig (1.88 % and 0.67 % pressure error, 3.72 % flow error) and detect surge from pressure and flow signals. This twin adds the course methods they do not use: POD of the stage field, a Kalman filter that keeps health factors in sync with the rig, CUSUM drift detection and a return path to the motor.</p>
+  </div>
+</section>
+
+<!-- ============================================================== REPORT -->
+<section class="view" id="view-report">
+  <div class="card">
+    <div class="card-h"><h2>Report-ready tables</h2></div>
+    <p class="note" style="margin-bottom:10px">Each table exports as CSV or Markdown, or copies as a LaTeX tabular (booktabs). Provenance tags are kept in the column headers.</p>
+    <div class="tbl-wrap"><table class="t" id="rep-tables"></table></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>Figures</h2></div>
+    <p class="note" style="margin-bottom:10px">Figures export as 1800 × 1125 px PNG on a white background with print colours, whatever theme you are viewing in.</p>
+    <div class="tbl-wrap"><table class="t" id="rep-figs"></table></div>
+  </div>
+</section>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>

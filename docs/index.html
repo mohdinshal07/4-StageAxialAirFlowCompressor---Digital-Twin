@@ -1,0 +1,1759 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body><title>Four-Stage Compressor Twin</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout concept: an instrument console. A full-width cutaway of the machine is the hero; operating inputs and the
+   deviation panel sit beside it; charts and records below. Provenance colours mark measured / simulated / estimated / design. */
+:root{
+  --bg:#ECEFF1; --panel:#FFFFFF; --panel-2:#F5F7F8; --ink:#14212B; --ink-2:#4D5D69; --ink-3:#7B8B96; --line:#D2D9DE;
+  --accent:#145C8F; --accent-ink:#FFFFFF; --focus:#145C8F;
+  --meas:#0E7469; --sim:#6A4FA0; --est:#1E62B0; --des:#6B7280;
+  --ok:#17803D; --warn:#B26E12; --alarm:#C42222;
+  --metal:#8B98A3; --metal-2:#C3CCD3; --hub:#5B6872; --shadow:0 1px 2px rgba(20,33,43,.06),0 4px 14px rgba(20,33,43,.05);
+  --f-display:"Archivo","Arial Narrow",Arial,sans-serif; --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0D1419; --panel:#141E25; --panel-2:#1A262F; --ink:#E2E9ED; --ink-2:#A3B2BC; --ink-3:#73848F; --line:#26343E;
+  --accent:#5AA6E0; --accent-ink:#071019; --focus:#7DBBEA;
+  --meas:#35C4B3; --sim:#B49BEB; --est:#6EB2F0; --des:#A0A7B0;
+  --ok:#4CC879; --warn:#E9B04A; --alarm:#F07373;
+  --metal:#7F8C96; --metal-2:#4A5862; --hub:#33424C; --shadow:none; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#0D1419; --panel:#141E25; --panel-2:#1A262F; --ink:#E2E9ED; --ink-2:#A3B2BC; --ink-3:#73848F; --line:#26343E;
+  --accent:#5AA6E0; --accent-ink:#071019; --focus:#7DBBEA;
+  --meas:#35C4B3; --sim:#B49BEB; --est:#6EB2F0; --des:#A0A7B0;
+  --ok:#4CC879; --warn:#E9B04A; --alarm:#F07373;
+  --metal:#7F8C96; --metal-2:#4A5862; --hub:#33424C; --shadow:none; color-scheme:dark; }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 32px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1,h2,h3{font-family:var(--f-display);font-stretch:88%;text-wrap:balance;margin:0}
+h1{font-size:20px;font-weight:750;letter-spacing:.005em}
+h2{font-size:15px;font-weight:700;letter-spacing:.01em}
+h3{font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink-2);text-transform:uppercase}
+p{margin:0}
+a{color:var(--accent)}
+button,select,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink-2)} .faint{color:var(--ink-3)} .small{font-size:12px}
+
+/* top bar */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);border-bottom:1px solid var(--line);
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-block:10px}
+.brand{display:flex;flex-direction:column;min-width:0}
+.brand .sub{font-size:12px;color:var(--ink-2)}
+.tabs{display:flex;flex-wrap:wrap;gap:2px;margin-left:auto}
+.tabs a{padding:6px 10px;border-radius:6px;text-decoration:none;color:var(--ink-2);font-weight:500;font-size:13px}
+.tabs a[aria-current="page"]{background:var(--panel);color:var(--ink);box-shadow:inset 0 -2px 0 var(--accent)}
+.tabs a:hover{color:var(--ink)}
+.status{display:flex;align-items:center;gap:8px;font-size:12px}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding-block:8px;font-size:12px;color:var(--ink-2)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-family:var(--f-mono);font-size:10.5px;font-weight:500;letter-spacing:.04em;
+  padding:1px 6px;border-radius:4px;border:1px solid currentColor;line-height:16px;white-space:nowrap}
+.tag.meas{color:var(--meas)} .tag.sim{color:var(--sim);border-style:dashed} .tag.est{color:var(--est)} .tag.des{color:var(--des)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--panel-2);color:var(--ink-2);white-space:nowrap}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.chip.ok{color:var(--ok)} .chip.warn{color:var(--warn)} .chip.alarm{color:var(--alarm)} .chip.info{color:var(--accent)}
+
+/* cards and grids */
+.view{display:none}
+.view.on{display:block}
+.grid-main{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
+@media (max-width:1100px){.grid-main{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;box-shadow:var(--shadow);min-width:0}
+.card + .card{margin-top:14px}
+.card-h{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.card-h .tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.stack{display:flex;flex-direction:column;gap:14px}
+
+/* simulation */
+.sim-wrap{position:relative;overflow-x:auto}
+@media (max-width:760px){#sim{min-width:760px}}
+#sim{width:100%;display:block;border-radius:8px;background:var(--panel-2);aspect-ratio:16/9.4}
+.sim-banner{position:absolute;right:12px;bottom:12px;justify-content:flex-end;display:flex;gap:6px;flex-wrap:wrap}
+.sim-note{margin-top:8px;font-size:12px;color:var(--ink-2)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:4px 9px;font-size:12px;color:var(--ink-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+/* KPI tiles */
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:12px}
+.kpi{background:var(--panel-2);border-radius:8px;padding:8px 10px;border-left:3px solid var(--line);min-width:0}
+.kpi.ok{border-left-color:var(--ok)} .kpi.warn{border-left-color:var(--warn)} .kpi.alarm{border-left-color:var(--alarm)}
+.kpi .k{font-size:11.5px;color:var(--ink-2);display:flex;justify-content:space-between;gap:4px}
+.kpi .v{font-family:var(--f-mono);font-size:19px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.25}
+.kpi .v small{font-size:11px;color:var(--ink-2);margin-left:2px}
+.kpi .s{font-size:11px;color:var(--ink-3);font-family:var(--f-mono)}
+
+/* controls */
+.ctl{display:grid;gap:12px}
+.ctl label{display:block;font-size:12px;color:var(--ink-2);margin-bottom:3px}
+.row{display:flex;align-items:center;gap:8px}
+.row > *{min-width:0}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.val{font-family:var(--f-mono);font-size:12.5px;min-width:76px;text-align:right}
+select,input[type=text],input[type=number],input[type=date],textarea{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 7px;width:100%}
+textarea{min-height:60px;resize:vertical}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:5px 10px;font-size:12.5px;font-weight:500;cursor:pointer;color:var(--ink)}
+.btn:hover{border-color:var(--ink-3)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--alarm)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:3px 8px;font-size:11.5px}
+hr.sep{border:0;border-top:1px solid var(--line);margin:4px 0}
+fieldset{border:0;padding:0;margin:0}
+
+/* deviation panel */
+.dev-wrap{overflow-x:auto;margin-inline:-4px}
+.dev{width:100%;border-collapse:collapse;font-size:11.5px}
+.dev th{font-weight:600;text-align:right;color:var(--ink-2);padding:3px 4px;border-bottom:1px solid var(--line);white-space:nowrap}
+.dev th:first-child,.dev td:first-child{text-align:left}
+.dev td{padding:4px;border-bottom:1px solid var(--line);text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dev td:first-child{font-family:var(--f-body)}
+.cus{display:inline-block;width:30px;height:6px;border-radius:3px;background:var(--panel-2);position:relative;vertical-align:middle;overflow:hidden}
+.cus i{position:absolute;inset:0 auto 0 0;background:var(--warn)}
+.alarms{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.alarm-item{font-size:12.5px;padding:7px 9px;border-radius:7px;background:var(--panel-2);border-left:3px solid var(--warn)}
+.alarm-item.alarm{border-left-color:var(--alarm)} .alarm-item.ok{border-left-color:var(--ok)}
+.health{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.health div{background:var(--panel-2);border-radius:7px;padding:6px 8px}
+.health b{display:block;font-family:var(--f-mono);font-size:15px;font-weight:500}
+.health span{font-size:11px;color:var(--ink-2)}
+
+/* charts */
+.charts{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;margin-top:14px}
+.chart-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.chart-card .card-h{margin-bottom:4px}
+.chart-card canvas{width:100%;display:block;aspect-ratio:16/10}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table.t{border-collapse:collapse;width:100%;font-size:12.5px}
+table.t th{background:var(--panel-2);text-align:left;font-weight:600;color:var(--ink-2);padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.t td.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.t tr:last-child td{border-bottom:0}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:14px}
+.three{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.drop{border:1.5px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--ink-2);background:var(--panel-2)}
+.drop.over{border-color:var(--accent);color:var(--ink)}
+.empty{padding:18px;text-align:center;color:var(--ink-2);font-size:13px}
+.progress{height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--ok)}
+.pill-status{font-size:11.5px;padding:1px 7px;border-radius:999px;background:var(--panel-2)}
+.steps{display:grid;gap:10px;counter-reset:s}
+.step{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
+.step::before{counter-increment:s;content:counter(s);font-family:var(--f-mono);font-size:12px;width:24px;height:24px;border-radius:50%;
+  display:grid;place-items:center;background:var(--panel-2);color:var(--accent);font-weight:600}
+.step p{color:var(--ink-2);font-size:13px;max-width:72ch}
+.step b{font-weight:600}
+.note{font-size:12.5px;color:var(--ink-2);max-width:80ch}
+.toast{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);
+  padding:8px 12px;border-radius:8px;font-size:13px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;z-index:20}
+.toast.on{opacity:1;transform:none}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:30;padding:16px}
+.modal .box{background:var(--panel);border-radius:10px;padding:14px;width:min(760px,100%);max-height:86vh;overflow:auto}
+.modal textarea{min-height:300px;font-family:var(--f-mono);font-size:12px}
+@media (prefers-reduced-motion: reduce){ .toast{transition:none} }
+
+</style>
+<header class="topbar">
+  <div class="brand">
+    <h1>Four-Stage Compressor Twin</h1>
+    <span class="sub">AE 541 · 3D-printed PLA axial compressor · design PR 1.12 at 20,000 rpm · ROM C4-v2</span>
+  </div>
+  <nav class="tabs" aria-label="Sections">
+    <a href="#twin" data-view="twin">Live twin</a>
+    <a href="#compare" data-view="compare">Design &amp; data</a>
+    <a href="#log" data-view="log">Experiment log</a>
+    <a href="#checklist" data-view="checklist">Lab checklist</a>
+    <a href="#rom" data-view="rom">ROM &amp; validation</a>
+    <a href="#report" data-view="report">Report pack</a>
+  </nav>
+  <div class="status">
+    <span id="src-chip" class="chip info">Virtual rig</span>
+    <span class="mono" id="clock">t = 0.0 s</span>
+    <button class="btn sm" id="run-btn" type="button">Pause</button>
+  </div>
+</header>
+
+<div class="legend" aria-label="Value provenance">
+  <span><span class="tag meas">MEAS</span> measured on the rig (uploaded log)</span>
+  <span><span class="tag sim">SIM</span> simulated measurement from the virtual rig</span>
+  <span><span class="tag est">EST</span> estimated by the ROM, the motor model or the Kalman filter</span>
+  <span><span class="tag des">DES</span> design calculation</span>
+</div>
+
+<!-- ============================================================== LIVE TWIN -->
+<section class="view" id="view-twin">
+  <div class="grid-main">
+    <div class="stack">
+      <div class="card">
+        <div class="card-h">
+          <h2>Compressor: meridional section and mean-line cascade</h2>
+          <div class="tools">
+            <span class="small muted">Field</span>
+            <div class="seg" id="field-seg" role="group" aria-label="Colour field">
+              <button type="button" data-f="P0" aria-pressed="true">Total pressure</button>
+              <button type="button" data-f="T0" aria-pressed="false">Total temperature</button>
+              <button type="button" data-f="p" aria-pressed="false">Static pressure</button>
+              <button type="button" data-f="Ca" aria-pressed="false">Axial velocity</button>
+            </div>
+            <span class="small muted">Time</span>
+            <div class="seg" id="speed-seg" role="group" aria-label="Simulation speed">
+              <button type="button" data-s="1" aria-pressed="true">×1</button>
+              <button type="button" data-s="10" aria-pressed="false">×10</button>
+              <button type="button" data-s="60" aria-pressed="false">×60</button>
+            </div>
+            <button class="btn sm" type="button" data-export-fig="sim">PNG</button>
+          </div>
+        </div>
+        <div class="sim-wrap">
+          <canvas id="sim" aria-label="Animated compressor simulation"></canvas>
+          <div class="sim-banner" id="sim-banner"></div>
+        </div>
+        <p class="sim-note">Upper panel: half section (radial scale enlarged 2.3×), coloured by the ROM's station field; tracers move with the local axial velocity, slowed 2000×. Lower panel: blade-to-blade view at mean radius; rotor blades move at blade speed U and tracers follow the absolute velocity (C<sub>a</sub>, C<sub>u</sub>) from the velocity triangles. Everything drawn is <span class="tag est">EST</span> at the measured speed, inlet state and valve setting.</p>
+        <div class="kpis" id="kpis"></div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <div class="card-h"><h2>Operating inputs</h2><span class="chip info" id="mode-chip">Manual speed</span></div>
+        <div class="ctl">
+          <div>
+            <label for="src">Data source</label>
+            <select id="src">
+              <option value="rig">Virtual rig: simulated measurements</option>
+              <option value="replay">Replay an uploaded dataset</option>
+            </select>
+            <p class="small faint" id="src-note" style="margin-top:4px">The virtual rig reproduces the sensors (2 × PT100, 2 × LPS33HW, VESC telemetry) with noise and lag. Live hardware streams through the local Python twin over MQTT; upload its log under Design &amp; data.</p>
+          </div>
+          <div>
+            <label>Control mode</label>
+            <div class="seg" id="mode-seg" role="group" aria-label="Control mode">
+              <button type="button" data-m="manual" aria-pressed="true">Motor speed</button>
+              <button type="button" data-m="auto" aria-pressed="false">Hold pressure ratio</button>
+            </div>
+          </div>
+          <div id="ctl-manual">
+            <label for="in-n">Motor speed command</label>
+            <div class="row"><input type="range" id="in-n" min="0" max="24000" step="100" value="15000"><span class="val" id="v-n">15,000 rpm</span></div>
+          </div>
+          <div id="ctl-auto" hidden>
+            <label for="in-pr">Pressure-ratio set point</label>
+            <div class="row"><input type="range" id="in-pr" min="1.010" max="1.150" step="0.001" value="1.100"><span class="val" id="v-pr">1.100</span></div>
+          </div>
+          <div>
+            <label for="in-ta">Inlet (ambient) temperature</label>
+            <div class="row"><input type="range" id="in-ta" min="5" max="45" step="0.5" value="15"><span class="val" id="v-ta">15.0 °C</span></div>
+          </div>
+          <div>
+            <label for="in-pa">Inlet (ambient) pressure</label>
+            <div class="row"><input type="range" id="in-pa" min="90" max="105" step="0.05" value="101.325"><span class="val" id="v-pa">101.33 kPa</span></div>
+          </div>
+          <div>
+            <label for="in-phi">Load: outlet-valve opening (100 % = design area; closing raises load)</label>
+            <div class="row"><input type="range" id="in-phi" min="0.90" max="1.60" step="0.01" value="1.00"><span class="val" id="v-phi">100 %</span></div>
+          </div>
+          <hr class="sep">
+          <div>
+            <label for="fault">Fault injection (virtual rig only)</label>
+            <select id="fault">
+              <option value="none">None (healthy rig)</option>
+              <option value="erosion">Blade erosion or tip-clearance growth</option>
+              <option value="blockage">Inlet blockage (mesh over bellmouth)</option>
+              <option value="pbias">Outlet pressure-sensor offset</option>
+              <option value="rtd">Outlet RTD drift</option>
+              <option value="sag">Motor speed sag (supply drop)</option>
+              <option value="bearing">Bearing friction rise</option>
+            </select>
+            <div class="row" style="margin-top:6px"><input type="range" id="in-sev" min="0" max="1" step="0.05" value="0.5" aria-label="Fault severity"><span class="val" id="v-sev">50 %</span></div>
+          </div>
+          <div class="row" style="flex-wrap:wrap">
+            <label class="row small" style="margin:0;color:var(--ink-2)"><input type="checkbox" id="bellmouth"> Bellmouth flow tap fitted (measures ṁ)</label>
+          </div>
+          <div class="row" style="flex-wrap:wrap;gap:6px">
+            <button class="btn" type="button" id="btn-baseline">Set healthy baseline</button>
+            <button class="btn" type="button" id="btn-reset">Reset rig</button>
+            <button class="btn primary" type="button" id="btn-logpt">Log this point</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><h2>Deviation and anomalies</h2><span class="chip ok" id="anom-chip">Nominal</span></div>
+        <div class="dev-wrap"><table class="dev" id="dev-table" aria-label="Measured versus expected">
+          <thead><tr><th>Channel</th><th><span class="tag est">EST</span></th><th id="dev-src-h"><span class="tag sim">SIM</span></th><th>Δ</th><th>z</th><th>CUSUM</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div class="health" id="health"></div>
+        <div class="alarms" id="alarms"></div>
+        <p class="small faint" style="margin-top:8px">Expected values use the healthy baseline. z = deviation / combined sensor-and-model uncertainty; CUSUM accumulates persistent residuals (κ = 0.5, alarm at h = 8). The Kalman filter tracks two health factors: pressure rise h<sub>p</sub> and temperature rise h<sub>T</sub>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="charts" id="live-charts">
+    <div class="chart-card"><div class="card-h"><h3>Pressure ratio</h3><button class="btn sm" type="button" data-export-fig="c-pr">PNG</button></div><canvas id="c-pr"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Rotational speed</h3><button class="btn sm" type="button" data-export-fig="c-n">PNG</button></div><canvas id="c-n"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Temperatures</h3><button class="btn sm" type="button" data-export-fig="c-t">PNG</button></div><canvas id="c-t"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Motor power and current</h3><button class="btn sm" type="button" data-export-fig="c-p">PNG</button></div><canvas id="c-p"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Compressor map</h3><button class="btn sm" type="button" data-export-fig="c-map">PNG</button></div><canvas id="c-map"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Axial distribution through the stages</h3><button class="btn sm" type="button" data-export-fig="c-ax">PNG</button></div><canvas id="c-ax"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Velocity triangles at mean radius</h3>
+      <div class="tools"><select id="tri-stage" aria-label="Stage" style="width:auto"><option value="0">Stage 1</option><option value="1">Stage 2</option><option value="2">Stage 3</option><option value="3">Stage 4</option></select>
+      <button class="btn sm" type="button" data-export-fig="c-tri">PNG</button></div></div><canvas id="c-tri"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Kalman-filter health factors</h3><button class="btn sm" type="button" data-export-fig="c-kf">PNG</button></div><canvas id="c-kf"></canvas></div>
+  </div>
+</section>
+
+<!-- ============================================================== DESIGN & DATA -->
+<section class="view" id="view-compare">
+  <div class="two">
+    <div class="card">
+      <div class="card-h"><h2>Design reference</h2>
+        <div class="tools"><button class="btn sm" type="button" id="design-upload-btn">Upload JSON or CSV</button><input type="file" id="design-file" accept=".json,.csv,.txt" hidden>
+        <button class="btn sm primary" type="button" id="design-save">Save</button></div></div>
+      <p class="note" style="margin-bottom:10px">Values from the design calculation (inlet 15 °C, 101.325 kPa). Edit them if the design changes. The ROM itself is trained for this geometry; editing these values changes the design column used in comparisons, not the ROM.</p>
+      <div class="form-grid" id="design-form"></div>
+      <p class="small faint" id="design-status" style="margin-top:8px"></p>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Current operating point</h2><div class="tools"><button class="btn sm" type="button" data-export-tbl="op">Export table</button></div></div>
+      <div class="tbl-wrap"><table class="t" id="op-table"></table></div>
+      <p class="small faint" style="margin-top:8px">The design column applies at the design point (20,000 rpm, valve 100 %, 15 °C). The expected column is the ROM at the current speed, valve and inlet state.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="card-h"><h2>Sensor data</h2>
+      <div class="tools">
+        <button class="btn sm" type="button" id="tpl-btn">CSV template</button>
+        <button class="btn sm" type="button" id="example-btn">Generate example log (simulated)</button>
+      </div></div>
+    <div class="drop" id="drop">
+      <p><b>Drop a CSV log here</b> or <button class="btn sm" type="button" id="pick-btn">choose a file</button><input type="file" id="csv-file" accept=".csv,.txt" hidden></p>
+      <p class="small" style="margin-top:6px">Columns recognised: time_s, rpm, T_amb_C, P_amb_kPa, T_out_C, P_out_kPa (total) or p_out_static_kPa, I_batt_A, V_batt_V, mdot_kg_s, valve_pct. Header names are matched loosely.</p>
+      <div class="row" style="justify-content:center;margin-top:8px;gap:12px;flex-wrap:wrap">
+        <label class="row small" style="margin:0"><input type="radio" name="kind" value="measured" checked> Measured on the rig</label>
+        <label class="row small" style="margin:0"><input type="radio" name="kind" value="simulated"> Simulated or synthetic</label>
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px;flex-wrap:wrap;gap:8px">
+      <label for="ds-select" class="small muted" style="margin:0">Dataset</label>
+      <select id="ds-select" style="width:auto;min-width:240px"></select>
+      <button class="btn sm" type="button" id="ds-replay">Replay in live twin</button>
+      <button class="btn sm danger" type="button" id="ds-delete">Delete dataset</button>
+      <span class="small faint" id="ds-info"></span>
+    </div>
+    <div class="charts" id="ds-charts">
+      <div class="chart-card"><div class="card-h"><h3>Pressure ratio: measured vs expected</h3><button class="btn sm" type="button" data-export-fig="d-pr">PNG</button></div><canvas id="d-pr"></canvas></div>
+      <div class="chart-card"><div class="card-h"><h3>Outlet temperature: measured vs expected</h3><button class="btn sm" type="button" data-export-fig="d-t">PNG</button></div><canvas id="d-t"></canvas></div>
+      <div class="chart-card"><div class="card-h"><h3>Parity: pressure ratio</h3><button class="btn sm" type="button" data-export-fig="d-par">PNG</button></div><canvas id="d-par"></canvas></div>
+      <div class="chart-card"><div class="card-h"><h3>Battery current: measured vs expected</h3><button class="btn sm" type="button" data-export-fig="d-i">PNG</button></div><canvas id="d-i"></canvas></div>
+    </div>
+    <div class="card-h" style="margin-top:14px"><h2>Agreement metrics</h2><button class="btn sm" type="button" data-export-tbl="dsm">Export table</button></div>
+    <div class="tbl-wrap"><table class="t" id="dsm-table"></table></div>
+  </div>
+</section>
+
+<!-- ============================================================== LOG -->
+<section class="view" id="view-log">
+  <div class="card">
+    <div class="card-h"><h2>Experiment log</h2>
+      <div class="tools"><button class="btn sm" type="button" data-export-tbl="log">Export table</button></div></div>
+    <form id="log-form" class="form-grid" autocomplete="off">
+      <div><label for="lg-test">Test ID</label><input type="text" id="lg-test" placeholder="e.g. T-012"></div>
+      <div><label for="lg-op">Operator</label><input type="text" id="lg-op" placeholder="Name"></div>
+      <div><label for="lg-n">Speed (rpm)</label><input type="number" id="lg-n" step="10"></div>
+      <div><label for="lg-phi">Valve opening (%)</label><input type="number" id="lg-phi" step="1"></div>
+      <div><label for="lg-ta">T_amb (°C)</label><input type="number" id="lg-ta" step="0.1"></div>
+      <div><label for="lg-pa">P_amb (kPa)</label><input type="number" id="lg-pa" step="0.01"></div>
+      <div><label for="lg-pr">PR measured</label><input type="number" id="lg-pr" step="0.0001"></div>
+      <div><label for="lg-to">T_out measured (°C)</label><input type="number" id="lg-to" step="0.01"></div>
+      <div><label for="lg-i">I_batt measured (A)</label><input type="number" id="lg-i" step="0.1"></div>
+      <div><label for="lg-src">Source</label><select id="lg-src"><option value="measured">Measured on rig</option><option value="simulated">Virtual rig (simulated)</option></select></div>
+      <div style="grid-column:1/-1"><label for="lg-notes">Notes</label><textarea id="lg-notes" placeholder="Set-up, observations, anomalies"></textarea></div>
+      <div class="row" style="grid-column:1/-1;gap:8px;flex-wrap:wrap">
+        <button class="btn" type="button" id="lg-fill">Fill from live twin</button>
+        <button class="btn primary" type="submit">Add entry</button>
+        <span class="small faint" id="lg-status"></span>
+      </div>
+    </form>
+    <div class="tbl-wrap" style="margin-top:14px"><table class="t" id="log-table"></table></div>
+  </div>
+</section>
+
+<!-- ============================================================== CHECKLIST -->
+<section class="view" id="view-checklist">
+  <div class="card">
+    <div class="card-h"><h2>Lab components</h2>
+      <div class="tools"><span class="small muted" id="ck-sum"></span><button class="btn sm" type="button" data-export-tbl="ck">Export table</button></div></div>
+    <div class="progress" aria-hidden="true"><i id="ck-bar" style="width:0%"></i></div>
+    <div class="tbl-wrap" style="margin-top:12px"><table class="t" id="ck-table"></table></div>
+    <form id="ck-form" class="form-grid" style="margin-top:14px" autocomplete="off">
+      <div><label for="ck-item">Component</label><input type="text" id="ck-item" required></div>
+      <div><label for="ck-spec">Specification</label><input type="text" id="ck-spec"></div>
+      <div><label for="ck-qty">Qty</label><input type="number" id="ck-qty" min="1" value="1"></div>
+      <div><label for="ck-cost">Unit cost (USD)</label><input type="number" id="ck-cost" step="0.01"></div>
+      <div><label for="ck-cat">Category</label><select id="ck-cat"><option>Drive</option><option>Sensing</option><option>Electronics</option><option>Mechanical</option><option>Safety</option><option>Calibration</option></select></div>
+      <div class="row" style="align-self:end"><button class="btn primary" type="submit">Add component</button></div>
+    </form>
+  </div>
+</section>
+
+<!-- ============================================================== ROM -->
+<section class="view" id="view-rom">
+  <div class="two">
+    <div class="card">
+      <div class="card-h"><h2>How the ROM is built</h2></div>
+      <div class="steps" id="rom-steps"></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Held-out test (15 Latin-hypercube points)</h2><button class="btn sm" type="button" data-export-tbl="romv">Export table</button></div>
+      <div class="tbl-wrap"><table class="t" id="romv-table"></table></div>
+      <p class="note" style="margin-top:10px" id="rom-note"></p>
+    </div>
+  </div>
+  <div class="charts">
+    <div class="chart-card"><div class="card-h"><h3>POD spectrum</h3><button class="btn sm" type="button" data-export-fig="r-sv">PNG</button></div><canvas id="r-sv"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Model order: basis vs ROM error</h3><button class="btn sm" type="button" data-export-fig="r-sw">PNG</button></div><canvas id="r-sw"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>POD modes (total-pressure group)</h3><button class="btn sm" type="button" data-export-fig="r-md">PNG</button></div><canvas id="r-md"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Parity on test points: pressure ratio</h3><button class="btn sm" type="button" data-export-fig="r-par">PNG</button></div><canvas id="r-par"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Design of experiments</h3><button class="btn sm" type="button" data-export-fig="r-doe">PNG</button></div><canvas id="r-doe"></canvas></div>
+    <div class="chart-card"><div class="card-h"><h3>Casing thermal ROM: held-out run</h3><button class="btn sm" type="button" data-export-fig="r-th">PNG</button></div><canvas id="r-th"></canvas></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="card-h"><h2>Related work</h2></div>
+    <p class="note"><b>Y. Su and X. Chen, “Real-time simulation and abnormal condition recognition of series compressor system based on digital twin,” <i>Digital Engineering</i>, vol. 7, 100059, 2025.</b> doi:10.1016/j.dte.2025.100059. <a href="https://doi.org/10.1016/j.dte.2025.100059" target="_blank" rel="noopener">Open the paper</a></p>
+    <p class="note" style="margin-top:8px">Like this project, they build a compressor twin on a physics model (lumped mass, momentum and energy conservation) and set its boundary conditions from sensors at 8 Hz. They validate it on a real rig (1.88 % and 0.67 % pressure error, 3.72 % flow error) and detect surge from pressure and flow signals. This twin adds the course methods they do not use: POD of the stage field, a Kalman filter that keeps health factors in sync with the rig, CUSUM drift detection and a return path to the motor.</p>
+  </div>
+</section>
+
+<!-- ============================================================== REPORT -->
+<section class="view" id="view-report">
+  <div class="card">
+    <div class="card-h"><h2>Report-ready tables</h2></div>
+    <p class="note" style="margin-bottom:10px">Each table exports as CSV or Markdown, or copies as a LaTeX tabular (booktabs). Provenance tags are kept in the column headers.</p>
+    <div class="tbl-wrap"><table class="t" id="rep-tables"></table></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h2>Figures</h2></div>
+    <p class="note" style="margin-bottom:10px">Figures export as 1800 × 1125 px PNG on a white background with print colours, whatever theme you are viewing in.</p>
+    <div class="tbl-wrap"><table class="t" id="rep-figs"></table></div>
+  </div>
+</section>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="application/json" id="rom-data">{"meta":{"name":"C4-ROM v2 (POD + parametric surrogate + OpInf thermal)","created":"2026-11-19","fom":"mean-line stage-stacking off-design model (offdesign.py)","train_domain":{"N":[10000.0,20000.0],"phi":[0.94,1.5]},"doe":"Latin hypercube, 60 points, seed 2026; 45 train / 15 test","inputs":"x = N/sqrt(T_amb/288.15)/20000, phi = valve area / design area","reference":{"T":288.15,"P":101325.0,"a01":340.26265,"N_D":20000.0,"cp":1004.5,"gamma":1.4,"R":287.0}},"groups":[{"key":"Pi","label":"total-pressure rise  (P0/P01-1)/x^2","n":9},{"key":"Th","label":"total-temperature rise (T0/T01-1)/x^2","n":9},{"key":"Ps","label":"static pressure (p/P01-1)/x^2","n":9},{"key":"Ma","label":"axial Mach number (Ca/a01)/x","n":9},{"key":"ir","label":"rotor incidence (deg)","n":4},{"key":"DF","label":"rotor diffusion factor","n":4}],"stations":["inlet","R1 exit","S1 exit","R2 exit","S2 exit","R3 exit","S3 exit","R4 exit","S4 exit"],"mean":[0.0,0.029315046,0.027862555,0.05445053,0.053082786,0.077688603,0.076032227,0.090282229,0.088015197,0.0,0.01268752,0.01268752,0.024321701,0.024321701,0.035203716,0.035203716,0.04201839,0.04201839,-0.017117072,0.0017093369,0.0098489467,0.023045046,0.034528871,0.045949216,0.056946854,0.064395162,0.068890349,0.1565471,0.1575471,0.15835905,0.15913572,0.16011606,0.16084473,0.16186444,0.16258948,0.16339605,-1.5406053,-2.0632625,-2.3715479,-2.6763772,0.4028793,0.39345489,0.38377909,0.33234141],"scale":[0.0099381951,0.0099381951,0.0099381951,0.0099381951,0.0099381951,0.0099381951,0.0099381951,0.0099381951,0.0099381951,0.00162741,0.00162741,0.00162741,0.00162741,0.00162741,0.00162741,0.00162741,0.00162741,0.00162741,0.01073824,0.01073824,0.01073824,0.01073824,0.01073824,0.01073824,0.01073824,0.01073824,0.01073824,0.0065331898,0.0065331898,0.0065331898,0.0065331898,0.0065331898,0.0065331898,0.0065331898,0.0065331898,0.0065331898,1.1078734,1.1078734,1.1078734,1.1078734,0.032359047,0.032359047,0.032359047,0.032359047],"r":4,"V":[[0.0,-0.040507904,-0.056128671,-0.1006172,-0.11494215,-0.16201565,-0.17878183,-0.23192197,-0.25417849,0.0,-0.055220523,-0.055220523,-0.11218715,-0.11218715,-0.16970219,-0.16970219,-0.24105988,-0.24105988,-0.017427429,-0.041694298,-0.070752402,-0.096827243,-0.12622735,-0.15338377,-0.18640296,-0.21954449,-0.25682924,0.133007,0.13688108,0.1413478,0.14522898,0.1498075,0.15377626,0.15883905,0.16338102,0.16894359,-0.12529558,-0.14971539,-0.15770019,-0.16623897,-0.11905086,-0.12974147,-0.13601977,-0.20300215],[-0.0,0.058586335,0.075834613,0.067879401,0.071206338,-0.0078591674,-0.020375345,-0.14078262,-0.17421642,0.0,0.10116629,0.10116629,0.14443784,0.14443784,0.11842646,0.11842646,0.01691747,0.01691747,0.043189795,0.071282044,0.10164175,0.097184051,0.084969471,0.04283229,-0.01177397,-0.085491676,-0.16100694,-0.37732181,-0.25077182,-0.1757727,-0.098787867,0.013330079,0.078666309,0.1901191,0.23712953,0.28880566,0.3581898,0.18861081,-0.012005493,-0.19748113,0.19594607,0.079488919,-0.076743825,-0.29806686],[-0.0,-0.0087535241,-0.10248868,-0.10556389,-0.18266964,-0.17227874,-0.2537648,-0.22014696,-0.32053272,0.0,0.025859558,0.025859558,0.062398623,0.062398623,0.11175942,0.11175942,0.18397206,0.18397206,-0.000658788,-0.021693359,-0.092872594,-0.11616571,-0.16460107,-0.18400584,-0.22829139,-0.23288518,-0.28974281,-0.029876074,-0.06410088,-0.076574441,-0.095525556,-0.11898073,-0.13358129,-0.15536608,-0.16604571,-0.16876689,0.049332555,0.10594128,0.15424037,0.19627933,0.088938977,0.11939498,0.15667794,0.26289527],[0.0,-0.067006626,-0.23457557,-0.2686695,-0.25432747,-0.21681238,-0.022482699,-0.047610189,0.34185153,-1.2621774e-29,0.040899917,0.040899917,0.046103991,0.046103991,0.070313005,0.070313005,0.043170375,0.043170375,-0.0057906304,-0.06731782,-0.20555132,-0.21611731,-0.20903985,-0.127421,0.013449386,0.091046018,0.31986298,0.13175084,-0.10138304,-0.017552505,-0.012485212,-0.11825299,-0.055476448,-0.12628594,0.086705581,0.35453264,-0.04066359,0.042495407,0.086474124,0.03001594,0.21369418,0.028125328,-0.01897628,-0.31392479]],"sigma":[44.387189,2.380578,2.0214701,0.14989347,0.037008546,0.0087540964,0.0035177351,0.0032594577,0.00090143045,0.0008265434,0.00018610638,0.00010333083,8.6415832e-05,4.0894132e-05,3.3019119e-05,9.5847911e-06,3.9911963e-06,1.9346269e-06,8.3981212e-07,4.4348469e-07,1.445029e-07,7.8108793e-08,4.4552979e-08,2.0988279e-08,1.7137424e-08,5.314181e-09,3.2477251e-09,1.0806072e-09,6.815562e-10,3.5129535e-10,1.4995456e-10,1.0813796e-10,7.9731325e-11,3.0262291e-11,5.8851863e-13,5.2403741e-13,3.1849453e-13,1.9307364e-13,3.2052056e-15,3.2052056e-15,3.2052056e-15,3.2052056e-15,3.2052056e-15,3.2491453e-16],"energy":[0.9950619,0.9979241,0.99998791,0.99999926,0.99999995,0.99999999,0.99999999,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],"norm":{"x":[0.75,0.25],"phi":[1.22,0.28]},"amp":[{"degree":5,"exps":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,0],[1,1],[1,2],[1,3],[1,4],[2,0],[2,1],[2,2],[2,3],[3,0],[3,1],[3,2],[4,0],[4,1],[5,0]],"coef":[-0.23202014,11.583443,-3.3337524,0.76591411,-0.18553388,0.056088006,-0.44126448,0.42975128,-0.18062175,0.070269802,-0.031396644,-0.066905312,0.06197226,-0.052767097,0.026775332,0.015887507,0.016215218,-0.012240055,-0.013130577,0.024008561,-0.019368176]},{"degree":6,"exps":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[1,0],[1,1],[1,2],[1,3],[1,4],[1,5],[2,0],[2,1],[2,2],[2,3],[2,4],[3,0],[3,1],[3,2],[3,3],[4,0],[4,1],[4,2],[5,0],[5,1],[6,0]],"coef":[-0.079385341,0.070205854,0.27696602,-0.17479096,0.089781058,-0.082455393,0.039656937,-0.61925493,0.25966768,-0.010936593,-0.02967634,0.059394308,-0.034867105,-0.11133918,0.06634005,-0.026005106,-0.032670179,0.032821562,-0.01426358,0.023530382,0.0079163122,-0.01029333,-0.013803312,-0.017344926,0.023026878,0.01175915,-0.023231496,0.012116379]},{"degree":6,"exps":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[1,0],[1,1],[1,2],[1,3],[1,4],[1,5],[2,0],[2,1],[2,2],[2,3],[2,4],[3,0],[3,1],[3,2],[3,3],[4,0],[4,1],[4,2],[5,0],[5,1],[6,0]],"coef":[-0.33017935,0.32414524,0.83023997,-0.53389564,0.27759317,-0.34134087,0.19200388,0.067600557,-0.029625071,-0.048497264,-0.010699903,0.092689613,-0.048457034,0.033188289,0.064510062,-0.11249677,-0.075323861,0.10988374,-0.030209898,0.066884754,0.010268368,-0.012040375,-0.046389608,-0.055630624,0.076070468,0.03735887,-0.069509598,0.04069062]},{"degree":5,"exps":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,0],[1,1],[1,2],[1,3],[1,4],[2,0],[2,1],[2,2],[2,3],[3,0],[3,1],[3,2],[4,0],[4,1],[5,0]],"coef":[-0.0032314598,0.0029414704,-0.0018128626,-0.0053603504,0.032216253,-0.024992684,0.017381695,0.059406122,-0.036410944,0.014678943,-0.0055338952,-0.0036534813,0.016508048,-0.0034885828,-0.0044411426,-0.0047226723,-0.0017321694,0.00040710764,0.0025887827,-0.004743533,0.0034914304]}],"scalars":{"mx":{"degree":6,"exps":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[1,0],[1,1],[1,2],[1,3],[1,4],[1,5],[2,0],[2,1],[2,2],[2,3],[2,4],[3,0],[3,1],[3,2],[3,3],[4,0],[4,1],[4,2],[5,0],[5,1],[6,0]],"coef":[0.22280024,0.013788324,-0.0052818461,0.0016540063,-0.00052793288,0.00053157148,-0.00029757951,0.00054725642,-0.00043775203,-5.7269288e-05,0.00011940607,-0.0002355887,0.00012625665,4.7582121e-05,-0.0002042474,0.00018216616,0.00016734847,-0.00020692886,5.755689e-05,-0.000133956,-2.7005842e-05,3.6035003e-05,8.7223891e-05,0.00010822239,-0.00014816993,-7.2817987e-05,0.0001384618,-7.6967376e-05]},"SM":{"degree":5,"exps":[[0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[1,0],[1,1],[1,2],[1,3],[1,4],[2,0],[2,1],[2,2],[2,3],[3,0],[3,1],[3,2],[4,0],[4,1],[5,0]],"coef":[0.15265193,0.090037345,-0.02853447,0.0081656216,-0.003767787,0.0017035551,0.0052028859,0.010373195,-0.0016721326,0.00040028919,-0.0003770067,0.00086611236,0.001409057,-0.00047040002,0.00040847097,0.00046358748,0.00023201723,-6.8499595e-05,-0.0004535862,0.00044472207,-0.00063546059]}},"sweep":[{"r":1,"energy":0.9950619,"proj_err":0.092646457,"rom_err":0.09269714,"PR_max":0.003938356,"Tout_max":0.1206813},{"r":2,"energy":0.9979241,"proj_err":0.075196356,"rom_err":0.075292931,"PR_max":0.0038386553,"Tout_max":0.12022447},{"r":3,"energy":0.99998791,"proj_err":0.0056126255,"rom_err":0.011135363,"PR_max":0.00042716822,"Tout_max":0.027833117},{"r":4,"energy":0.99999926,"proj_err":0.0025311321,"rom_err":0.010058204,"PR_max":0.00042971217,"Tout_max":0.027817958},{"r":5,"energy":0.99999995,"proj_err":0.00077200331,"rom_err":0.0098681563,"PR_max":0.00043189174,"Tout_max":0.027828914},{"r":6,"energy":0.99999999,"proj_err":0.00073957324,"rom_err":0.0098663811,"PR_max":0.00043214423,"Tout_max":0.027839022},{"r":7,"energy":0.99999999,"proj_err":0.00051206205,"rom_err":0.0098663416,"PR_max":0.00043212829,"Tout_max":0.027838661},{"r":8,"energy":1.0,"proj_err":0.00029594359,"rom_err":0.0098663144,"PR_max":0.00043214065,"Tout_max":0.027837043}],"metrics":{"train":{"PR":{"R2":0.99999987,"RMSE":8.0301937e-06,"MAE":6.2452104e-06,"max_abs":1.9771052e-05},"T_out_K":{"R2":1.0,"RMSE":0.00017724412,"MAE":0.00011076981,"max_abs":0.00060748214},"P_out_kPa":{"R2":0.99999987,"RMSE":0.00081365937,"MAE":0.00063279595,"max_abs":0.0020033018},"mdot_kg_s":{"R2":1.0,"RMSE":1.8949483e-06,"MAE":1.4082057e-06,"max_abs":6.4089357e-06},"eta":{"R2":0.99999848,"RMSE":8.9685831e-05,"MAE":7.4568018e-05,"max_abs":0.00024614815},"power_air_W":{"R2":1.0,"RMSE":0.023628665,"MAE":0.013911988,"max_abs":0.10390373},"SM":{"R2":0.99999976,"RMSE":2.5790307e-05,"MAE":2.0485252e-05,"max_abs":6.6261778e-05}},"test":{"PR":{"R2":0.99997822,"RMSE":0.00011420014,"MAE":4.4992015e-05,"max_abs":0.00042971217},"T_out_K":{"R2":0.9999932,"RMSE":0.0073865483,"MAE":0.0029031852,"max_abs":0.027817958},"P_out_kPa":{"R2":0.99997822,"RMSE":0.01157133,"MAE":0.0045588159,"max_abs":0.043540586},"mdot_kg_s":{"R2":0.9999876,"RMSE":0.00011511213,"MAE":4.6790147e-05,"max_abs":0.00042853989},"eta":{"R2":0.99936924,"RMSE":0.0013475439,"MAE":0.00057611773,"max_abs":0.0050074212},"power_air_W":{"R2":0.99999998,"RMSE":0.10033033,"MAE":0.054197226,"max_abs":0.34173116},"SM":{"R2":0.99985023,"RMSE":0.00066479176,"MAE":0.00030865586,"max_abs":0.002294301},"field_rel_err":0.010058204,"field_proj_err":0.0025311321,"PR_GP":{"R2":0.99749309,"RMSE":0.0012251133,"MAE":0.00082641915,"max_abs":0.0039502142},"T_out_K_GP":{"R2":0.99984826,"RMSE":0.0348866,"MAE":0.023354955,"max_abs":0.11184478}},"stress":{"PR":{"R2":0.99848725,"RMSE":0.0025630747,"MAE":0.0015239899,"max_abs":0.0054959766},"T_out_K":{"R2":0.99984406,"RMSE":0.091635198,"MAE":0.049589199,"max_abs":0.20164759},"P_out_kPa":{"R2":0.99848725,"RMSE":0.25970354,"MAE":0.15441827,"max_abs":0.55687982},"mdot_kg_s":{"R2":0.99997035,"RMSE":0.00042431981,"MAE":0.0003033066,"max_abs":0.00085516557},"eta":{"R2":0.99393747,"RMSE":0.0075067494,"MAE":0.0065552161,"max_abs":0.013387069},"power_air_W":{"R2":0.9997559,"RMSE":30.903339,"MAE":16.557219,"max_abs":67.608133},"SM":{"R2":0.99746011,"RMSE":0.0034689247,"MAE":0.0026620516,"max_abs":0.0069825107},"field_rel_err":0.079503985}},"observability":{"rank":2,"r":4,"sing":[0.56165973,0.30529588],"rank_with_midtaps_and_bellmouth":4,"cond_with_midtaps_and_bellmouth":3.0360568},"timing":{"fom_s":0.28050154,"rom_python_us":210.25385},"thermal":{"info":{"nodes":40,"r":2,"energy":[0.99997323,0.99999987,1.0,1.0,1.0,1.0],"op_diff_data_vs_physics":0.00013465309,"test_max_err_K":0.015001271,"test_proj_max_err_K":0.015539412,"test_rel_err":0.00024505384,"tau_s":110.98629,"eig_max":0.99098269},"x":[0.0,0.0032820513,0.0065641026,0.0098461538,0.013128205,0.016410256,0.019692308,0.022974359,0.02625641,0.029538462,0.032820513,0.036102564,0.039384615,0.042666667,0.045948718,0.049230769,0.052512821,0.055794872,0.059076923,0.062358974,0.065641026,0.068923077,0.072205128,0.075487179,0.078769231,0.082051282,0.085333333,0.088615385,0.091897436,0.095179487,0.098461538,0.10174359,0.10502564,0.10830769,0.11158974,0.11487179,0.11815385,0.1214359,0.12471795,0.128],"f":[0.0,0.033918947,0.12075145,0.20758395,0.29102456,0.29102456,0.29102456,0.29102456,0.29102456,0.29102456,0.29102456,0.34287392,0.42380949,0.50474507,0.56228521,0.56228521,0.56228521,0.56228521,0.56228521,0.56228521,0.56228521,0.63073078,0.70758194,0.78443311,0.81985669,0.81985669,0.81985669,0.81985669,0.81985669,0.81985669,0.82741515,0.8811642,0.93491326,0.98866231,1.0,1.0,1.0,1.0,1.0,1.0],"V":[[-0.0077951462,-0.013932866,-0.029492399,-0.046942939,-0.061693202,-0.066226346,-0.067633345,-0.06814727,-0.06858099,-0.069618988,-0.072907176,-0.08359896,-0.099410525,-0.11537336,-0.12675174,-0.13024954,-0.13134579,-0.13177924,-0.13223433,-0.1334303,-0.13726448,-0.14973602,-0.16526058,-0.17990669,-0.18839098,-0.19099861,-0.19182372,-0.19217461,-0.1926051,-0.19379616,-0.19762801,-0.2073228,-0.21833676,-0.22816069,-0.23245104,-0.23376233,-0.23416196,-0.23428394,-0.23432052,-0.23432857],[-0.45837905,-0.35621073,-0.10628048,0.10892726,0.29540189,0.15649422,0.054939693,-0.00068440427,-0.049682081,-0.13079498,-0.25232557,-0.18931977,-0.017402712,0.15506403,0.24035034,0.11652683,0.032683773,-0.015655216,-0.065563684,-0.1537256,-0.27748523,-0.14262401,0.022438359,0.18440983,0.19043804,0.081497,0.013942041,-0.025580792,-0.068127808,-0.13778316,-0.19911629,-0.083757015,0.032259562,0.14697213,0.10064661,0.032227002,-0.0031044822,-0.017261009,-0.022154879,-0.023300061]],"Ar":[[0.99943391,0.00012687598],[0.00014832526,0.99673417]],"Nr":[[-0.008458104,7.5252057e-08],[-3.9180968e-07,-0.0084786473]],"br":[-0.03615313,0.00062724079],"dt":1.0,"params":{"k":0.13,"rho":1240.0,"c":1800.0,"t":0.006,"Di":0.101,"Do":0.113,"h_g":120.0,"h_o":7.0},"m_design":0.20823563},"geometry":{"stages":[{"stage":1,"rm":0.043821243,"lam":0.98,"beta2_deg":43.543723,"alpha3_deg":8.0,"alpha1_deg":0.0,"kappa1_rotor_deg":61.419028,"kappa1_stator_deg":41.514097,"rh":[0.0375,0.037668204,0.037784972],"A":[0.003436117,0.003396396,0.0033687169],"Z_rotor":38,"Z_stator":27,"chord_rotor":0.014,"chord_stator":0.014},{"stage":2,"rm":0.043956991,"lam":0.93,"beta2_deg":39.828155,"alpha3_deg":8.0,"alpha1_deg":8.0,"kappa1_rotor_deg":59.545134,"kappa1_stator_deg":45.207364,"rh":[0.037784972,0.037896246,0.038042991],"A":[0.0033687169,0.0033422604,0.0033072515],"Z_rotor":40,"Z_stator":39,"chord_rotor":0.014,"chord_stator":0.014},{"stage":3,"rm":0.044080532,"lam":0.88,"beta2_deg":39.982948,"alpha3_deg":8.0,"alpha1_deg":8.0,"kappa1_rotor_deg":59.621135,"kappa1_stator_deg":45.22396,"rh":[0.038042991,0.038137336,0.038279137],"A":[0.0033072515,0.0032846721,0.00325063],"Z_rotor":41,"Z_stator":42,"chord_rotor":0.014,"chord_stator":0.014},{"stage":4,"rm":0.044180288,"lam":0.83,"beta2_deg":46.894077,"alpha3_deg":0.0,"alpha1_deg":8.0,"kappa1_rotor_deg":59.682253,"kappa1_stator_deg":38.033146,"rh":[0.038279137,0.038357332,0.038442014],"A":[0.00325063,0.0032318036,0.0032113723],"Z_rotor":19,"Z_stator":26,"chord_rotor":0.014,"chord_stator":0.014}],"r_tip":0.0505,"module_pitch":0.032},"design":{"N":20000.0,"PR":1.12,"T_out":301.76707,"P_out":113484.0,"m":0.20823563,"eta":0.6963972,"power_air":2848.3182,"SM":0.052734731,"dT0_stage":[3.9629006,3.693774,3.5073678,2.4530233]},"points":{"train":{"N":[17609.0,11094.0,14223.0,12073.0,17399.0,12294.0,12750.0,11739.0,14704.0,13922.0,15629.0,11396.0,17140.0,13259.0,15737.0,10986.0,11570.0,15120.0,19079.0,18581.0,19666.0,13557.0,16918.0,18706.0,10672.0,13419.0,14395.0,15422.0,16080.0,16343.0,14889.0,10367.0,19742.0,15956.0,11274.0,12364.0,10017.0,13128.0,12847.0,19263.0,17804.0,19384.0,16519.0,18045.0,18378.0],"phi":[1.244,1.194,1.4039,1.361,1.4122,0.9909,1.0138,1.4281,1.0211,1.217,1.2819,1.0341,1.2621,1.0894,1.1254,1.1134,1.2353,1.1677,1.3824,1.1899,1.4366,1.3234,1.3599,0.9995,1.4855,1.4517,1.0712,1.3756,1.0607,1.4681,1.4226,1.3933,1.0876,1.4968,1.3352,1.1792,1.0644,1.2539,1.4567,1.3218,1.2033,0.9744,1.1405,1.3444,1.4732],"PR":[1.068454,1.028048,1.036356,1.027338,1.05455,1.043774,1.04604,1.023895,1.061334,1.043445,1.051009,1.035749,1.063288,1.045779,1.062549,1.030262,1.029085,1.054692,1.068462,1.081893,1.068405,1.036215,1.054749,1.104103,1.018457,1.030548,1.055426,1.04438,1.070647,1.044921,1.039079,1.019321,1.105527,1.041385,1.024508,1.035629,1.026544,1.036834,1.027792,1.075143,1.073634,1.115137,1.067959,1.063778,1.056926],"T_out":[297.4713,291.90098,293.9262,292.35632,296.78809,293.25581,293.56626,292.05739,295.34126,294.01687,295.38487,292.41895,296.92072,293.7718,295.95417,291.95684,292.16848,295.21506,298.63071,298.76032,299.13004,293.51575,296.43251,300.03211,291.33588,293.22971,294.84752,294.99648,296.5737,295.66359,294.45145,291.2229,300.73754,295.26454,291.84381,292.84057,291.38996,293.29473,292.79958,299.02924,297.83014,301.1597,296.69714,297.62244,297.64788],"m":[0.197423,0.122621,0.163532,0.137888,0.200396,0.126766,0.132928,0.135354,0.153981,0.154905,0.176342,0.119757,0.192804,0.142386,0.171197,0.118752,0.129123,0.166357,0.218974,0.205999,0.227274,0.153965,0.19344,0.194526,0.123918,0.155224,0.15372,0.176665,0.171253,0.189474,0.171635,0.118937,0.212854,0.185568,0.128208,0.136235,0.106441,0.147172,0.148688,0.219155,0.197902,0.198986,0.180581,0.205924,0.21323],"eta":[0.590378,0.609538,0.511588,0.529933,0.510086,0.695074,0.68861,0.499228,0.687309,0.600426,0.570173,0.68081,0.581105,0.659726,0.645609,0.647519,0.58979,0.625251,0.52513,0.617671,0.500837,0.548619,0.533888,0.695978,0.47385,0.489799,0.668238,0.525413,0.673711,0.484517,0.503598,0.51412,0.66565,0.471988,0.541536,0.617566,0.668206,0.581835,0.487292,0.554008,0.610443,0.700482,0.639304,0.542137,0.483726],"SM":[0.163641,0.140976,0.199556,0.18614,0.209089,0.055339,0.067623,0.199247,0.070321,0.15066,0.172204,0.078462,0.1687,0.103394,0.118816,0.112809,0.153821,0.134903,0.206321,0.145769,0.221175,0.179882,0.195435,0.054252,0.207308,0.207308,0.095242,0.195872,0.089826,0.21803,0.204989,0.190046,0.1018,0.222392,0.179088,0.137081,0.092628,0.160853,0.206932,0.190304,0.14998,0.036619,0.125246,0.193963,0.225263]},"test":{"N":[12573.0,16801.0,10560.0,15324.0,10227.0,14092.0,17849.0,19998.0,13682.0,18231.0,18891.0,11953.0,16329.0,17298.0,14620.0],"phi":[1.3008,1.0244,0.9584,0.9839,1.268,1.1348,1.0443,1.1594,0.9624,1.1024,1.2917,1.1458,1.2223,0.9476,1.3077],"PR":[1.031881,1.080731,1.033076,1.069552,1.021762,1.049186,1.089656,1.099355,1.056096,1.087545,1.074823,1.034602,1.060051,1.092398,1.043089],"T_out":[292.79492,297.55134,291.99613,296.15643,291.25235,294.36977,298.65519,300.62583,294.61519,298.77667,298.71263,292.59451,296.22096,298.69249,294.42417],"m":[0.142187,0.176449,0.106848,0.157736,0.114857,0.153566,0.189148,0.22026,0.138991,0.197282,0.213823,0.130513,0.182121,0.17421,0.165653],"eta":[0.558745,0.687475,0.699805,0.698103,0.573064,0.639932,0.681218,0.63362,0.700461,0.65804,0.568244,0.633185,0.599848,0.698925,0.556911],"SM":[0.172717,0.070632,0.036568,0.048536,0.161384,0.122041,0.080626,0.134527,0.036359,0.109193,0.18066,0.125241,0.154917,0.019765,0.177644]},"test_rom":{"PR":[1.0318799,1.0807403,1.033076,1.0695395,1.0217642,1.0491894,1.0896953,1.0992781,1.0561439,1.0875679,1.0748032,1.0346052,1.0600506,1.0928273,1.0430949],"T_out":[292.79482,297.55069,291.99325,296.15652,291.25221,294.36991,298.65308,300.62835,294.61059,298.77475,298.71274,292.59452,296.22123,298.66468,294.42399],"m":[0.14218733,0.1764599,0.10690755,0.15773586,0.11485912,0.15356386,0.1891829,0.22022599,0.13908141,0.197311,0.21382163,0.13051126,0.18211919,0.17463823,0.16565701],"eta":[0.55874607,0.68760273,0.70032691,0.69796794,0.57315797,0.63995939,0.68164418,0.63301921,0.70155031,0.65832425,0.56809175,0.63324437,0.59982809,0.70393234,0.55700471],"SM":[0.17274918,0.070686268,0.037445989,0.048578015,0.16142047,0.12201493,0.080780893,0.13437136,0.03706956,0.10936724,0.18066118,0.12524977,0.1548628,0.022059031,0.17764995]},"stress":{"N":[6000.0,8000.0,22000.0,24000.0,15000.0],"phi":[1.2,1.0,1.2,1.0,1.6],"PR":[1.008034,1.018068,1.115825,1.178044,1.032526],"T_out":[289.24196,290.28991,303.02693,307.97483,294.307],"m":[0.066305,0.082685,0.245023,0.250557,0.176194]},"stress_rom":{"PR":[1.0081177,1.0181721,1.114245,1.172548,1.0321696],"T_out":[289.24384,290.29419,302.99111,307.77318,294.31132],"m":[0.066387044,0.082739994,0.24465655,0.2497017,0.17603709]}},"thermal_test":{"t":[0,20,40,60,80,100,120,140,160,180,200,220,240,260,280,300,320,340,360,380,400,420,440,460,480,500,520,540,560,580,600,620,640,660,680,700,720,740,760,780,800,820,840,860,880,900,920,940,960,980,1000,1020,1040,1060,1080,1100,1120,1140,1160,1180,1200,1220,1240,1260,1280,1300,1320,1340,1360,1380,1400,1420,1440,1460,1480,1500,1520,1540,1560,1580,1600,1620,1640,1660,1680,1700,1720,1740,1760,1780,1800,1820,1840,1860,1880,1900,1920,1940,1960,1980,2000,2020,2040,2060,2080,2100,2120,2140,2160,2180,2200,2220,2240,2260,2280,2300,2320,2340,2360,2380,2400],"fom_max":[0.0,2.1139329,3.8778394,5.3496772,6.577807,7.6025822,8.4576741,9.1711786,9.7665396,10.263319,10.677839,11.02372,11.312327,11.553144,11.754082,11.921745,12.061643,12.178372,12.275769,12.357036,12.424843,12.481419,12.528624,12.568009,12.600871,12.628288,12.651164,12.670249,12.686173,12.699458,12.710542,12.913603,13.085075,13.229873,13.352144,13.455395,13.542582,13.616206,13.678376,13.730874,13.775204,13.812637,13.844246,13.870937,13.893475,13.912506,13.928576,13.942145,13.953602,13.963277,13.971445,13.978343,13.984167,13.989084,13.993236,13.996741,13.999701,14.002201,14.004311,14.006092,14.007596,13.065907,12.227567,11.481233,10.816806,10.225296,9.6987007,9.2298952,8.8125369,8.4409798,8.1101973,7.815715,7.5535495,7.3201548,7.1123738,6.9273962,6.76272,6.6161179,6.4856067,6.369421,6.2659891,6.1739116,6.0919426,6.018973,5.9540153,5.8961903,5.8447153,5.7988932,5.7581037,5.7217944,5.6894735,7.5188262,9.0245749,10.263965,11.284114,12.123805,12.814961,13.383856,13.852118,14.237548,14.554798,14.815928,15.030864,15.207779,15.353397,15.473255,15.571909,15.653109,15.719944,15.774954,15.820231,15.857497,15.888169,15.913414,15.934191,15.951292,15.965366,15.97695,15.986483,15.994329,16.000787],"rom_max":[0.0,2.1164317,3.8809508,5.3521258,6.5791245,7.6033866,8.4578469,9.1711969,9.7665499,10.263364,10.677908,11.023803,11.312416,11.55323,11.754162,11.921816,12.061701,12.178418,12.275802,12.357056,12.424851,12.481416,12.528611,12.567988,12.600843,12.628255,12.651126,12.670208,12.686129,12.699412,12.710495,12.913551,13.085024,13.229825,13.352101,13.455355,13.542547,13.616174,13.678346,13.730845,13.775175,13.812608,13.844217,13.870907,13.893444,13.912474,13.928543,13.942111,13.953568,13.963242,13.97141,13.978307,13.984131,13.989048,13.9932,13.996706,13.999666,14.002165,14.004276,14.006058,14.007562,13.066031,12.227763,11.481441,10.816989,10.225431,9.6987774,9.2299109,8.8124948,8.4408867,8.1100623,7.8155481,7.5533607,7.3199535,7.1121687,6.9271949,6.7625288,6.6159417,6.4854494,6.3692853,6.2658768,6.1738235,6.0918789,6.0189333,5.9539987,5.8961955,5.8447406,5.7989371,5.7581643,5.7218698,5.6895619,7.5187053,9.0243763,10.263765,11.283952,12.123697,12.81491,13.383856,13.852158,14.237618,14.554887,14.816027,15.030966,15.207877,15.353487,15.473334,15.571975,15.653162,15.719983,15.77498,15.820245,15.8575,15.888162,15.913398,15.934168,15.951263,15.965332,15.976911,15.986441,15.994284,16.000739],"u1":[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.93,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08,1.08],"dT":[13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,13.6,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0,17.0]}}</script>
+<script type="application/json" id="map-data">{"lines":[{"N":8000,"m":[0.05985,0.06415,0.06846,0.07276,0.07706,0.08137,0.08567,0.08998,0.09428,0.09859],"PR":[1.00117,1.00872,1.01427,1.0178,1.01928,1.01864,1.01635,1.01307,1.00881,1.00352],"s":[0,0,0,0,0,1,1,1,1,1]},{"N":10000,"m":[0.07481,0.08019,0.08557,0.09095,0.09633,0.10171,0.10709,0.11247,0.11785,0.12323],"PR":[1.00237,1.01377,1.02229,1.02782,1.03023,1.02936,1.02579,1.0206,1.01379,1.00524],"s":[0,0,0,0,0,1,1,1,1,1]},{"N":12000,"m":[0.08977,0.09623,0.10268,0.10914,0.1156,0.12205,0.12851,0.13497,0.14142,0.14788],"PR":[1.00429,1.02008,1.03208,1.04006,1.04373,1.04268,1.03755,1.02997,1.01989,1.00706],"s":[0,0,0,0,0,1,1,1,1,1]},{"N":14000,"m":[0.10473,0.11226,0.1198,0.12733,0.13486,0.1424,0.14993,0.15746,0.165,0.17253],"PR":[1.00714,1.02772,1.04365,1.05452,1.0598,1.05874,1.05179,1.0413,1.02712,1.00878],"s":[0,0,0,0,0,1,1,1,1,1]},{"N":16000,"m":[0.11682,0.12543,0.13404,0.14265,0.15126,0.15987,0.16848,0.17709,0.1857,0.19431],"PR":[1.0015,1.02878,1.05086,1.06715,1.07686,1.07892,1.07225,1.05991,1.04252,1.0193],"s":[0,0,0,0,0,1,1,1,1,1]},{"N":18000,"m":[0.13142,0.14111,0.1508,0.16048,0.17017,0.17985,0.18954,0.19922,0.20891,0.2186],"PR":[1.00502,1.03759,1.06447,1.08482,1.09749,1.10086,1.09293,1.07711,1.05433,1.02314],"s":[0,0,0,0,0,1,1,1,1,1]},{"N":20000,"m":[0.14603,0.15679,0.16755,0.17831,0.18907,0.19984,0.2106,0.22136,0.23212,0.24288],"PR":[1.01006,1.04788,1.0797,1.10444,1.12054,1.12573,1.11676,1.097,1.06776,1.02656],"s":[0,0,0,0,0,1,1,1,1,1]},{"N":22000,"m":[0.15668,0.16852,0.18036,0.1922,0.20404,0.21587,0.22771,0.23955,0.25139,0.26323],"PR":[1.00129,1.04603,1.08502,1.11708,1.14047,1.15262,1.14939,1.12912,1.09683,1.04923],"s":[0,0,0,0,0,0,1,1,1,1]}],"surge":{"N":[8000,10000,12000,14000,16000,18000,20000,22000],"m":[0.07792,0.09762,0.11746,0.13747,0.15768,0.17814,0.1988,0.21973],"PR":[1.01932,1.03033,1.04393,1.06019,1.07919,1.10103,1.12579,1.15352]}}</script>
+<script>
+'use strict';
+/* =====================================================================================================
+   core.js: ROM evaluation, motor model, thermal ROM, virtual rig, Kalman filter, CUSUM, controller.
+   All physics constants and ROM operators come from rom_pod.json, built offline by build_pod_rom.py.
+   ===================================================================================================== */
+const ROM = JSON.parse(document.getElementById('rom-data').textContent);
+const MAP = JSON.parse(document.getElementById('map-data').textContent);
+const REF = ROM.meta.reference, NS = 9, EXP = REF.gamma/(REF.gamma - 1), CP = REF.cp, ETA_MECH = 0.97;
+const GEO = ROM.geometry.stages;
+const DESIGN_DEFAULT = {
+  stages: 4, N_rpm: 20000, PR: 1.12, mdot_kg_s: 0.2082, T_in_C: 15.0, P_in_kPa: 101.325,
+  T_out_C: +(ROM.design.T_out - 273.15).toFixed(2), P_out_kPa: +(ROM.design.P_out/1e3).toFixed(2), dT0_K: 13.62,
+  eta_overall: +ROM.design.eta.toFixed(4), eta_stage: 0.70, P_air_kW: +(ROM.design.power_air/1e3).toFixed(3),
+  P_shaft_kW: +(ROM.design.power_air/ETA_MECH/1e3).toFixed(3), torque_Nm: 1.40, Ca_m_s: 50, hub_in_mm: 75, tip_mm: 100,
+  hub_out_mm: 76.88, rotor_blades: '38, 40, 41, 19', stator_vanes: '27, 39, 42, 26', surge_margin: +ROM.design.SM.toFixed(3)
+};
+// Motor, battery and thermal parameters: ASSUMED values (Hobbywing 5687SL 1100 kV class, 8S LiPo). Calibrate on the rig.
+const MOTOR = {kv: 1100, R: 0.006, Pfe0: 45, esc: 0.97, Voc: 30.8, Rint: 0.020, Cw: 120, Cc: 280, Gwc: 12, Gca: 9, Tlim: 100, Pmax: 4200};
+MOTOR.Kt = 60/(2*Math.PI*MOTOR.kv);
+const PLA_LIMIT = 55, T_LAG = 3.0, TAU_N = 0.6, DT = 0.1;
+// combined sensor + model standard uncertainties used for z-scores (1 sigma)
+const SIG = {PR: 0.0015, Pout: 0.15, Tout: 0.25, I: 1.5, Pe: 45, m: 0.002, N: 30};
+
+const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+const lerp = (a, b, t) => a + (b - a)*t;
+let _seed = 20261119;
+function rnd(){ _seed = (_seed*1664525 + 1013904223) >>> 0; return _seed/4294967296; }
+function gauss(){ let u = 0, v = 0; while (u === 0) u = rnd(); v = rnd(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+
+/* ------------------------------------------------------------------ parametric POD ROM */
+function polyEval(m, u, v){
+  let s = 0; const e = m.exps, c = m.coef;
+  for (let k = 0; k < c.length; k++) s += c[k]*Math.pow(u, e[k][0])*Math.pow(v, e[k][1]);
+  return s;
+}
+function romPredict(N, phi, TaK = REF.T, PaPa = REF.P){
+  N = Math.max(N, 0);
+  const th = Math.sqrt(TaK/REF.T), dl = PaPa/REF.P, x = N/th/REF.N_D;
+  const xe = clamp(x, 0.5, 1.0);                       // similarity: shape outside the trained speed band taken at the band edge
+  const u = (xe - ROM.norm.x[0])/ROM.norm.x[1], v = (phi - ROM.norm.phi[0])/ROM.norm.phi[1];
+  const a = ROM.amp.map(m => polyEval(m, u, v));
+  const nF = ROM.mean.length, F = new Float64Array(nF);
+  for (let i = 0; i < nF; i++){ let q = 0; for (let j = 0; j < ROM.r; j++) q += ROM.V[j][i]*a[j]; F[i] = q*ROM.scale[i] + ROM.mean[i]; }
+  const x2 = x*x, a0 = Math.sqrt(REF.gamma*REF.R*TaK);
+  const P0 = [], T0 = [], p = [], Ca = [];
+  for (let k = 0; k < NS; k++){ P0.push(PaPa*(1 + x2*F[k])); T0.push(TaK*(1 + x2*F[NS + k])); p.push(PaPa*(1 + x2*F[2*NS + k])); Ca.push(F[3*NS + k]*x*a0); }
+  const ir = Array.from(F.slice(4*NS, 4*NS + 4)), DF = Array.from(F.slice(4*NS + 4, 4*NS + 8));
+  const PR = P0[NS - 1]/PaPa, TR = T0[NS - 1]/TaK;
+  const m = Math.max(polyEval(ROM.scalars.mx, u, v), 0)*x*dl/th;
+  const SM = polyEval(ROM.scalars.SM, u, v);
+  const eta = TR > 1 + 1e-6 ? (Math.pow(PR, 1/EXP) - 1)/(TR - 1) : NaN;
+  const Pair = m*CP*(T0[NS - 1] - TaK), omega = N*2*Math.PI/60;
+  const Pshaft = Pair/ETA_MECH;
+  return {x, phi, N, TaK, PaPa, P0, T0, p, Ca, ir, DF, PR, TR, Pout: P0[NS - 1], Tout: T0[NS - 1], m, SM, eta, Pair, Pshaft,
+          torque: omega > 1 ? Pshaft/omega : 0, a, extrap: x < 0.495 || x > 1.005 || phi < 0.935 || phi > 1.505};
+}
+// inverse ROM: speed that gives a target pressure ratio at this valve setting and inlet state (PR rises monotonically with N)
+function romSpeedForPR(PRt, phi, TaK, PaPa, hp = 1){
+  if (PRt <= 1.0001) return 0;
+  const target = 1 + (PRt - 1)/hp;
+  let lo = 0, hi = 26000;
+  if (romPredict(hi, phi, TaK, PaPa).PR < target) return hi;
+  for (let k = 0; k < 40; k++){ const mid = 0.5*(lo + hi); if (romPredict(mid, phi, TaK, PaPa).PR > target) hi = mid; else lo = mid; }
+  return 0.5*(lo + hi);
+}
+
+/* ------------------------------------------------------------------ motor + battery (coupled discipline model) */
+function motorModel(N, Pshaft, extraLoss = 0){
+  const w = N*2*Math.PI/60, tq = w > 1 ? Pshaft/w : 0;
+  const Iq = tq/MOTOR.Kt, Pcu = 1.5*MOTOR.R*Iq*Iq;
+  const Pfe = MOTOR.Pfe0*Math.pow(Math.max(N, 0)/20000, 1.5) + extraLoss;
+  const Pm = Pshaft + Pcu + Pfe, Pe = Pm/MOTOR.esc + (N > 50 ? 4 : 0);
+  const disc = MOTOR.Voc*MOTOR.Voc - 4*MOTOR.Rint*Pe;
+  const Ib = disc > 0 ? (MOTOR.Voc - Math.sqrt(disc))/(2*MOTOR.Rint) : MOTOR.Voc/(2*MOTOR.Rint);
+  return {tq, Iq, Pcu, Pfe, Ploss: Pcu + Pfe, Pe, Ib, Vb: MOTOR.Voc - MOTOR.Rint*Ib, eta_m: Pe > 0 ? Pshaft/Pe : 0};
+}
+function motorThermalStep(st, Ploss, TaC, dt){
+  const dTw = (Ploss - MOTOR.Gwc*(st.Tw - st.Tc))/MOTOR.Cw, dTc = (MOTOR.Gwc*(st.Tw - st.Tc) - MOTOR.Gca*(st.Tc - TaC))/MOTOR.Cc;
+  st.Tw += dt*dTw; st.Tc += dt*dTc;
+}
+function motorTimeToLimit(st, Ploss, TaC){
+  const steady = TaC + Ploss*(1/MOTOR.Gca + 1/MOTOR.Gwc);
+  if (steady < MOTOR.Tlim) return {steady, t: Infinity};
+  const s = {Tw: st.Tw, Tc: st.Tc};
+  for (let t = 0; t < 7200; t += 1){ if (s.Tw >= MOTOR.Tlim) return {steady, t}; motorThermalStep(s, Ploss, TaC, 1); }
+  return {steady, t: Infinity};
+}
+
+/* ------------------------------------------------------------------ PLA casing thermal ROM (operator inference) */
+const TH = ROM.thermal, RT = TH.V.length;
+function thermalStep(a, u1, u2){
+  const o = new Array(RT).fill(0);
+  for (let i = 0; i < RT; i++){ let s = 0; for (let j = 0; j < RT; j++) s += (TH.Ar[i][j] + u1*TH.Nr[i][j])*a[j]; o[i] = s + u2*TH.br[i]; }
+  return o;
+}
+function casingField(a){ return TH.x.map((_, i) => { let s = 0; for (let j = 0; j < RT; j++) s += TH.V[j][i]*a[j]; return s; }); }
+function thermalInputs(est){
+  const u1 = Math.pow(Math.max(est.m, 0)/TH.m_design, 0.8);
+  return [u1, u1*Math.max(est.Tout - est.TaK, 0)];
+}
+function casingTimeToLimit(a, u1, u2, TaC){
+  // steady state: a* = (I - Ar - u1 Nr)^-1 br u2 (2x2 or rxr solved by Gauss elimination)
+  const M = [], b = [];
+  for (let i = 0; i < RT; i++){ M.push([]); for (let j = 0; j < RT; j++) M[i].push((i === j ? 1 : 0) - TH.Ar[i][j] - u1*TH.Nr[i][j]); b.push(TH.br[i]*u2); }
+  const as = solve(M, b), steady = TaC + Math.max(...casingField(as));
+  if (steady < PLA_LIMIT) return {steady, t: Infinity};
+  let s = a.slice();
+  for (let t = 0; t < 7200; t++){ if (TaC + Math.max(...casingField(s)) >= PLA_LIMIT) return {steady, t}; s = thermalStep(s, u1, u2); }
+  return {steady, t: Infinity};
+}
+function solve(A, b){
+  const n = b.length, M = A.map((r, i) => r.concat([b[i]]));
+  for (let c = 0; c < n; c++){
+    let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    [M[c], M[p]] = [M[p], M[c]];
+    for (let r = 0; r < n; r++){ if (r === c) continue; const f = M[r][c]/M[c][c]; for (let k = c; k <= n; k++) M[r][k] -= f*M[c][k]; }
+  }
+  return M.map((r, i) => r[n]/r[i]);
+}
+
+/* ------------------------------------------------------------------ faults (virtual rig truth) */
+const FAULTS = {
+  none:     {label: 'None', h: s => ({p: 1, t: 1, m: 1})},
+  erosion:  {label: 'Blade erosion / tip clearance', h: s => ({p: 1 - 0.12*s, t: 1 + 0.06*s, m: 1 - 0.05*s})},
+  blockage: {label: 'Inlet blockage', h: s => ({p: 1 - 0.16*s, t: 1 - 0.04*s, m: 1 - 0.22*s})},
+  pbias:    {label: 'Outlet pressure-sensor offset', h: s => ({p: 1, t: 1, m: 1}), pbias: s => 600*s},
+  rtd:      {label: 'Outlet RTD drift', h: s => ({p: 1, t: 1, m: 1}), tdrift: s => 1.6*s},
+  sag:      {label: 'Motor speed sag', h: s => ({p: 1, t: 1, m: 1}), sag: s => 0.14*s},
+  bearing:  {label: 'Bearing friction rise', h: s => ({p: 1, t: 1, m: 1}), loss: s => 260*s},
+};
+
+/* ------------------------------------------------------------------ simulation state */
+const S = {
+  t: 0, running: true, speed: 1, source: 'rig', mode: 'manual',
+  Nman: 15000, PRset: 1.10, phi: 1.0, TaC: 15, PaK: 101.325, fault: 'none', sev: 0.5, bellmouth: false,
+  N: 0, Ncmd: 0, Nexp: 0, I: 0, mot: {Tw: 15, Tc: 15}, motEst: {Tw: 15, Tc: 15}, thA: new Array(RT).fill(0), thAcc: 0,
+  sens: {Tout: REF.T, ToutEstLag: REF.T}, surge: 0,
+  kf: {x: [1, 1, 1], P: [1e-3, 1e-3, 1e-3]}, base: {p: 1, t: 1, m: 1},
+  cus: {}, meas: null, est: null, mest: null, truth: null, replay: null, alarms: [], devRows: [],
+};
+function resetRig(){
+  Object.assign(S, {t: 0, N: 0, Ncmd: 0, Nexp: 0, I: 0, surge: 0, thA: new Array(RT).fill(0), thAcc: 0});
+  S.mot = {Tw: S.TaC, Tc: S.TaC}; S.motEst = {Tw: S.TaC, Tc: S.TaC};
+  S.sens = {Tout: S.TaC + 273.15, ToutEstLag: S.TaC + 273.15};
+  S.kf = {x: [1, 1, 1], P: [1e-3, 1e-3, 1e-3]}; S.cus = {};
+  HIST.clear();
+}
+
+/* ------------------------------------------------------------------ history (ring buffers, sampled every 0.5 s of sim time) */
+const HIST = {
+  keys: ['t', 'PRm', 'PRe', 'PRset', 'N', 'Ncmd', 'Tm', 'Te', 'Tw', 'Tcas', 'Pe_m', 'Pe_e', 'Psh', 'Ib_m', 'Ib_e', 'hp', 'ht', 'hpS', 'htS', 'm', 'phi'],
+  max: 1440, d: {}, next: 0,
+  clear(){ this.keys.forEach(k => this.d[k] = []); this.next = 0; },
+  push(o){ this.keys.forEach(k => { const a = this.d[k]; a.push(o[k]); if (a.length > this.max) a.shift(); }); },
+};
+HIST.clear();
+
+/* ------------------------------------------------------------------ Kalman filter on health factors (random-walk states) */
+function kfUpdate(i, y, H, R, q){
+  const kf = S.kf; kf.P[i] += q;
+  const Sv = H*H*kf.P[i] + R, K = kf.P[i]*H/Sv, nu = y - H*kf.x[i];
+  kf.x[i] += K*nu; kf.P[i] = (1 - K*H)*kf.P[i];
+  return nu/Math.sqrt(Sv);
+}
+function cusum(key, z, kappa = 0.5){
+  const c = S.cus[key] || (S.cus[key] = {hi: 0, lo: 0});
+  if (!isFinite(z)) return c;
+  c.hi = Math.max(0, c.hi + z - kappa); c.lo = Math.max(0, c.lo - z - kappa);
+  return c;
+}
+const CUSUM_H = 8;
+
+/* ------------------------------------------------------------------ one simulation step (DT = 0.1 s) */
+function measureRig(dt){
+  const f = FAULTS[S.fault] || FAULTS.none, s = S.sev, TaK = S.TaC + 273.15, Pa = S.PaK*1e3;
+  const sag = f.sag ? f.sag(s) : 0;
+  // speed loop of the VESC as a first-order lag, limited by electrical power
+  let target = clamp(S.Ncmd, 0, 26000)*(1 - sag);
+  const prev = S.truth;
+  if (prev && prev.mot.Pe > MOTOR.Pmax && target > S.N) target = S.N;
+  S.N += (target - S.N)*Math.min(dt/TAU_N, 1);
+  const r = romPredict(S.N, S.phi, TaK, Pa), h = f.h(s);
+  const hp = h.p*S.base.p, ht = h.t*S.base.t, hm = h.m*S.base.m;
+  let PR = 1 + hp*(r.PR - 1); const Tout = TaK + ht*(r.Tout - TaK); let m = hm*r.m;
+  const SM = r.SM - 0.6*(1 - h.m) - 0.4*(1 - h.p);
+  // surge: limit-cycle oscillation of pressure and flow when the operating point crosses the surge line
+  if (SM < 0 && S.N > 3000){ S.surge += dt; const amp = clamp(-SM*25, 0.25, 1); PR = 1 + (PR - 1)*(1 + 0.18*amp*Math.sin(2*Math.PI*3.2*S.t)); m *= 1 + 0.6*amp*Math.sin(2*Math.PI*3.2*S.t + 1.2); }
+  else S.surge = 0;
+  const Pair = m*CP*(Tout - TaK), Pshaft = Pair/ETA_MECH;
+  const mot = motorModel(S.N, Pshaft, f.loss ? f.loss(s) : 0);
+  motorThermalStep(S.mot, mot.Ploss, S.TaC, dt);
+  S.sens.Tout += (Tout + (f.tdrift ? f.tdrift(s) : 0) - S.sens.Tout)*Math.min(dt/T_LAG, 1);
+  S.truth = {N: S.N, PR, Tout, m, SM, Pshaft, mot, r};
+  return {
+    t: S.t, N: S.N + 8*gauss(), Ncmd: S.Ncmd, TaC: S.TaC + 0.03*gauss(), Pa: Pa + 2*gauss(),
+    Pout: PR*Pa + (f.pbias ? f.pbias(s) : 0) + 10*gauss(), Tout: S.sens.Tout + 0.03*gauss(),
+    Ib: mot.Ib + 0.4*gauss(), Vb: mot.Vb + 0.05*gauss(), m: S.bellmouth ? m + 0.0015*gauss() : null, phi: S.phi, kind: 'sim',
+  };
+}
+function measureReplay(){
+  const R = S.replay; if (!R || !R.rows.length) return null;
+  const rows = R.rows, t0 = rows[0].t, span = rows[rows.length - 1].t - t0 || 1;
+  const tt = t0 + ((S.t - R.start) % span);
+  let k = R.k || 0; if (rows[k].t > tt) k = 0;
+  while (k < rows.length - 2 && rows[k + 1].t <= tt) k++;
+  R.k = k; const a = rows[k], b = rows[Math.min(k + 1, rows.length - 1)], w = b.t > a.t ? clamp((tt - a.t)/(b.t - a.t), 0, 1) : 0;
+  const L = key => (a[key] == null || b[key] == null) ? (a[key] ?? null) : lerp(a[key], b[key], w);
+  const Pa = (L('Pa') ?? S.PaK*1e3);
+  const phi = L('phi') ?? S.phi;
+  S.N = L('N') ?? 0; S.Ncmd = S.N;
+  return {t: tt, N: S.N, Ncmd: S.N, TaC: L('TaC') ?? S.TaC, Pa, Pout: L('Pout'), Tout: L('Tout') != null ? L('Tout') + 273.15 : null,
+          Ib: L('Ib'), Vb: L('Vb'), m: L('m'), phi, kind: R.kind === 'measured' ? 'meas' : 'sim'};
+}
+
+function step(){
+  const dt = DT;
+  // controller (rig only): motor speed command
+  if (S.source === 'rig'){
+    if (S.mode === 'auto'){
+      const m = S.meas, TaK = S.TaC + 273.15, Pa = S.PaK*1e3;
+      const ff = romSpeedForPR(S.PRset, S.phi, TaK, Pa, clamp(S.kf.x[0], 0.7, 1.2));
+      const PRm = m && m.Pout ? m.Pout/m.Pa : 1, e = S.PRset - PRm;
+      let u = ff + 2.0e4*e + 6.0e4*(S.I + e*dt);
+      const uL = clamp(u, 0, 24000), du = clamp(uL - S.Ncmd, -3000*dt, 3000*dt);
+      if (uL === u && Math.abs(du) < 3000*dt*0.999 && S.N > 2000) S.I += e*dt;
+      S.Ncmd += du;
+    } else {
+      S.Ncmd += clamp(S.Nman - S.Ncmd, -3000*dt, 3000*dt); S.I = 0;
+    }
+  }
+  const meas = S.source === 'rig' ? measureRig(dt) : measureReplay();
+  S.Nexp += (clamp(S.Ncmd, 0, 26000) - S.Nexp)*Math.min(dt/TAU_N, 1);   // expected response of the VESC speed loop
+  S.t += dt;
+  if (!meas){ return; }
+  S.meas = meas;
+  // ---- twin estimate at the MEASURED speed and inlet state (healthy baseline)
+  const TaK = meas.TaC + 273.15, est = romPredict(Math.max(meas.N, 0), meas.phi, TaK, meas.Pa);
+  const b = S.base, PRb = 1 + b.p*(est.PR - 1), Toutb = TaK + b.t*(est.Tout - TaK), mb = b.m*est.m;
+  const Pshb = mb*CP*(Toutb - TaK)/ETA_MECH, mest = motorModel(meas.N, Pshb);
+  S.est = Object.assign({}, est, {PRb, Toutb, mb, Pshb});
+  S.mest = mest;
+  S.sens.ToutEstLag += (Toutb - S.sens.ToutEstLag)*Math.min(dt/T_LAG, 1);
+  motorThermalStep(S.motEst, mest.Ploss, meas.TaC, dt);
+  // casing thermal ROM, advanced in its own 1 s steps
+  S.thAcc += dt;
+  while (S.thAcc >= TH.dt){ const [u1, u2] = thermalInputs(S.est); S.thA = thermalStep(S.thA, u1, u2); S.thAcc -= TH.dt; }
+  // ---- Kalman filter (synchronisation) and residual checks
+  const run = meas.N > 4000 && S.surge === 0;
+  const dev = [];
+  const z = {};
+  if (meas.Pout != null){
+    const PRm = meas.Pout/meas.Pa, Hp = est.PR - 1;
+    if (run && Hp > 0.004){ const Rp = Math.pow(SIG.PR*0.25, 2); z.kfp = kfUpdate(0, PRm - 1, Hp, Rp, Math.pow(4e-4, 2)); }
+    z.PR = (PRm - PRb)/SIG.PR; dev.push(['Pressure ratio', PRb, PRm, 4, 'PR', z.PR]);
+    z.Pout = (meas.Pout - PRb*meas.Pa)/1e3/SIG.Pout; dev.push(['Outlet P₀ (kPa)', PRb*meas.Pa/1e3, meas.Pout/1e3, 2, 'Pout', z.Pout]);
+  }
+  if (meas.Tout != null){
+    const Ht = S.sens.ToutEstLag - TaK;
+    if (run && Ht > 0.6){ const Rt = Math.pow(0.08, 2); z.kft = kfUpdate(1, meas.Tout - TaK, (Ht)/b.t, Rt, Math.pow(4e-4, 2)); }
+    z.Tout = (meas.Tout - S.sens.ToutEstLag)/SIG.Tout; dev.push(['Outlet T₀ (°C)', S.sens.ToutEstLag - 273.15, meas.Tout - 273.15, 2, 'Tout', z.Tout]);
+  }
+  if (meas.m != null){
+    if (run) kfUpdate(2, meas.m, est.m, Math.pow(0.0015, 2), Math.pow(4e-4, 2));
+    z.m = (meas.m - mb)/SIG.m; dev.push(['ṁ (kg/s)', mb, meas.m, 4, 'm', z.m]);
+  }
+  if (meas.Ib != null){ z.I = (meas.Ib - mest.Ib)/SIG.I; dev.push(['Battery I (A)', mest.Ib, meas.Ib, 1, 'I', z.I]);
+    if (meas.Vb != null){ const Pe = meas.Ib*meas.Vb; z.Pe = (Pe - mest.Pe)/SIG.Pe; dev.push(['Elec. power (W)', mest.Pe, Pe, 0, 'Pe', z.Pe]); } }
+  if (S.source === 'rig'){ z.N = (meas.N - S.Nexp)/Math.max(SIG.N, 0.01*S.Nexp); dev.push(['Speed (rpm)', S.Nexp, meas.N, 0, 'N', z.N]); }
+  dev.forEach(d => { if (run || d[4] === 'N') cusum(d[4], d[4] === 'N' ? Math.min(d[5], 0) : d[5]); });
+  S.devRows = dev;
+  S.alarms = evaluateAlarms(meas, est, z);
+  // ---- history every 0.5 s
+  if (S.t >= HIST.next){
+    HIST.next = S.t + 0.5;
+    const cas = S.TaC + Math.max(...casingField(S.thA));
+    HIST.push({t: S.t, PRm: meas.Pout != null ? meas.Pout/meas.Pa : null, PRe: PRb, PRset: S.mode === 'auto' && S.source === 'rig' ? S.PRset : null,
+      N: meas.N, Ncmd: S.Ncmd, Tm: meas.Tout != null ? meas.Tout - 273.15 : null, Te: S.sens.ToutEstLag - 273.15, Tw: S.motEst.Tw, Tcas: cas,
+      Pe_m: meas.Ib != null && meas.Vb != null ? meas.Ib*meas.Vb : null, Pe_e: mest.Pe, Psh: Pshb, Ib_m: meas.Ib, Ib_e: mest.Ib,
+      hp: S.kf.x[0], ht: S.kf.x[1], hpS: 2*Math.sqrt(S.kf.P[0]), htS: 2*Math.sqrt(S.kf.P[1]), m: mb, phi: meas.phi});
+  }
+}
+
+/* ------------------------------------------------------------------ alarms and diagnosis hints */
+function status(key){
+  const c = S.cus[key]; const row = S.devRows.find(d => d[4] === key); const z = row ? Math.abs(row[5]) : 0;
+  if ((c && Math.max(c.hi, c.lo) > CUSUM_H) || z > 4) return 'alarm';
+  if (z > 2 || (c && Math.max(c.hi, c.lo) > CUSUM_H/2)) return 'warn';
+  return 'ok';
+}
+function evaluateAlarms(meas, est, z){
+  const out = [], st = k => status(k);
+  if (S.surge > 0) out.push(['alarm', 'Surge: the operating point is beyond the surge line. Open the outlet valve or lower the speed.']);
+  else if (est.SM < 0.03 && meas.N > 4000) out.push(['warn', `Surge margin ${(est.SM*100).toFixed(1)} %: close to surge. Open the valve before raising the speed.`]);
+  if (est.extrap && meas.N > 1000) out.push(['warn', 'Outside the ROM training domain (10,000–20,000 rpm corrected, valve 94–150 %). Treat estimates as extrapolation.']);
+  if (S.surge > 0) return out;                      // residual diagnosis is meaningless while the flow is surging
+  const sP = st('PR'), sT = st('Tout'), sI = st('I'), sN = st('N'), sM = S.bellmouth ? st('m') : 'ok';
+  const zp = z.PR || 0, zt = z.Tout || 0, zi = z.I || 0;
+  if (sN !== 'ok' && (z.N || 0) < -2) out.push([sN, 'Speed below command: motor speed sag (supply voltage or ESC current limit).']);
+  if (sP !== 'ok' && zp < 0 && sT !== 'ok' && zt > 0) out.push(['alarm', 'Pressure rise low and temperature rise high: efficiency loss (blade erosion, tip-clearance growth or surface damage).']);
+  else if (sP !== 'ok' && zp < 0 && (zi < -1 || (S.bellmouth && (z.m || 0) < -2))) out.push(['alarm', 'Pressure rise and flow low: flow restriction such as inlet blockage.']);
+  else if (sP !== 'ok' && sT === 'ok' && sI === 'ok') out.push([sP, 'Pressure channel deviates alone: suspect the outlet pressure sensor (offset). Repeat the zero-speed cross-calibration.']);
+  else if (sP !== 'ok') out.push([sP, 'Pressure ratio deviates from the expected value.']);
+  if (sT !== 'ok' && sP === 'ok') out.push([sT, 'Outlet temperature deviates alone: suspect RTD drift or probe recovery error.']);
+  if (sI !== 'ok' && sP === 'ok' && sT === 'ok' && zi > 0) out.push([sI, 'Electrical power above expectation with normal aerodynamics: mechanical loss (bearings, coupling) or motor/ESC loss.']);
+  if (sM !== 'ok' && sP === 'ok') out.push([sM, 'Measured mass flow deviates from the expected value.']);
+  const cas = S.TaC + Math.max(...casingField(S.thA));
+  if (cas > PLA_LIMIT - 5) out.push([cas > PLA_LIMIT ? 'alarm' : 'warn', `PLA casing at ${cas.toFixed(1)} °C (limit ${PLA_LIMIT} °C).`]);
+  if (S.motEst.Tw > MOTOR.Tlim - 15) out.push([S.motEst.Tw > MOTOR.Tlim ? 'alarm' : 'warn', `Motor winding at ${S.motEst.Tw.toFixed(0)} °C (assumed limit ${MOTOR.Tlim} °C).`]);
+  if (S.mest && S.mest.Pe > MOTOR.Pmax*0.95) out.push(['warn', 'Electrical power at the 4.2 kW limit.']);
+  return out;
+}
+
+'use strict';
+/* =====================================================================================================
+   draw.js: theme tokens, colour maps, the animated compressor (meridional + cascade), velocity
+   triangles and a small chart plotter used for every figure (screen and PNG export).
+   ===================================================================================================== */
+const TOKS = ['bg', 'panel', 'panel-2', 'ink', 'ink-2', 'ink-3', 'line', 'accent', 'meas', 'sim', 'est', 'des', 'ok', 'warn', 'alarm', 'metal', 'metal-2', 'hub'];
+let TOK = {};
+function readTokens(){ const cs = getComputedStyle(document.documentElement); TOKS.forEach(k => TOK[k] = cs.getPropertyValue('--' + k).trim() || '#888'); }
+const PRINT = {bg: '#ffffff', panel: '#ffffff', 'panel-2': '#f3f5f7', ink: '#111111', 'ink-2': '#444444', 'ink-3': '#777777', line: '#d0d5da',
+  accent: '#1f4e79', meas: '#0e7469', sim: '#6a4fa0', est: '#1e62b0', des: '#6b7280', ok: '#17803d', warn: '#b26e12', alarm: '#c42222',
+  metal: '#8b98a3', 'metal-2': '#c3ccd3', hub: '#5b6872'};
+const col = (tok, c) => (c && tok[c]) || c || tok.ink;
+
+/* ------------------------------------------------------------------ colour maps */
+const CMAP = [[0, [38, 48, 107]], [0.25, [31, 120, 180]], [0.5, [43, 179, 159]], [0.75, [233, 196, 71]], [1, [216, 69, 42]]];
+function cmap(t){
+  t = clamp(t, 0, 1); let i = 0; while (i < CMAP.length - 2 && t > CMAP[i + 1][0]) i++;
+  const [t0, c0] = CMAP[i], [t1, c1] = CMAP[i + 1], w = (t - t0)/(t1 - t0);
+  return `rgb(${Math.round(lerp(c0[0], c1[0], w))},${Math.round(lerp(c0[1], c1[1], w))},${Math.round(lerp(c0[2], c1[2], w))})`;
+}
+function heat(t){ t = clamp(t, 0, 1); return `rgb(${Math.round(lerp(70, 220, t))},${Math.round(lerp(130, 60, t))},${Math.round(lerp(200, 40, t))})`; }
+const FIELD = {
+  P0: {label: 'P₀ − p_amb (kPa)', get: e => e.P0.map(v => (v - e.PaPa)/1e3), lo: 0, hi: 16},
+  T0: {label: 'T₀ (°C)', get: e => e.T0.map(v => v - 273.15), lo: null, hi: null},
+  p:  {label: 'p − p_amb (kPa)', get: e => e.p.map(v => (v - e.PaPa)/1e3), lo: -3, hi: 12},
+  Ca: {label: 'Cₐ (m/s)', get: e => e.Ca, lo: 0, hi: 70},
+};
+
+/* ------------------------------------------------------------------ axial geometry (metres; s = 0 at the first module face) */
+const STATION_S = [0.002]; for (let k = 0; k < 4; k++){ STATION_S.push(0.032*k + 0.016, 0.032*k + 0.031); }
+function rhub(s){
+  if (s <= 0) return GEO[0].rh[0];
+  if (s >= 0.128) return GEO[3].rh[2];
+  const k = Math.min(Math.floor(s/0.032), 3), m = (s - 0.032*k)/0.032, rh = GEO[k].rh;
+  return m < 0.5 ? lerp(rh[0], rh[1], m/0.5) : lerp(rh[1], rh[2], (m - 0.5)/0.5);
+}
+function interpStations(vals, s){
+  if (s <= STATION_S[0]) return vals[0];
+  for (let i = 0; i < NS - 1; i++) if (s <= STATION_S[i + 1]) return lerp(vals[i], vals[i + 1], (s - STATION_S[i])/(STATION_S[i + 1] - STATION_S[i]));
+  return vals[NS - 1];
+}
+// absolute tangential velocity Cu(s) from the velocity triangles at mean radius
+function cuAt(s, e, omega){
+  if (s < 0) return 0;
+  const k = Math.min(Math.floor(s/0.032), 3), g = GEO[k], m = s - 0.032*k;
+  const U = omega*g.rm, Ca1 = e.Ca[2*k], Ca2 = e.Ca[2*k + 1], Ca3 = e.Ca[2*k + 2];
+  const Cu1 = Ca1*Math.tan(g.alpha1_deg*Math.PI/180), Cu2 = U - Ca2*Math.tan(g.beta2_deg*Math.PI/180), Cu3 = Ca3*Math.tan(g.alpha3_deg*Math.PI/180);
+  if (s >= 0.128) return Cu3;
+  if (m < 0.002) return Cu1;
+  if (m < 0.016) return lerp(Cu1, Cu2, (m - 0.002)/0.014);
+  if (m < 0.017) return Cu2;
+  if (m < 0.031) return lerp(Cu2, Cu3, (m - 0.017)/0.014);
+  return Cu3;
+}
+
+/* ------------------------------------------------------------------ animated compressor */
+const ANIM = {mp: [], cp: [], phase: [0, 0, 0, 0], shaft: 0, last: 0, field: 'P0', slow: 2000};
+function initParticles(){
+  ANIM.mp = Array.from({length: 150}, () => ({s: -0.035 + rnd()*0.19, r: 0.06 + 0.88*rnd(), up: 0}));
+  ANIM.cp = Array.from({length: 120}, () => ({s: -0.01 + rnd()*0.15, y: rnd()}));
+}
+initParticles();
+
+function layout(W, H){
+  const kx = 0.46*W/0.128, ky = kx*2.3, x0 = 0.085*W;
+  const X = s => x0 + (s + 0.035)*kx;
+  const Yc = 0.535*H, hubBody = 0.075*H;
+  const Y = r => Yc - hubBody - (r - 0.0375)*ky;
+  return {kx, ky, X, Yc, Y, Yt: Y(0.0505), casT: 12, casY0: 0.60*H, casY1: 0.985*H};
+}
+
+function drawSim(ctx, W, H, tok, dtReal, opts = {}){
+  const e = S.est, L = layout(W, H), X = L.X, Y = L.Y;
+  ctx.save(); ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = tok['panel-2']; ctx.fillRect(0, 0, W, H);
+  const fs = Math.max(10, W/95), font = (w, sz) => `${w} ${sz}px "IBM Plex Sans", system-ui, sans-serif`, mono = sz => `${sz}px "IBM Plex Mono", ui-monospace, monospace`;
+  if (!e){ ctx.restore(); return; }
+  const N = e.N, omega = N*2*Math.PI/60, surge = S.surge > 0;
+  // advance animation (real time)
+  const dv = dtReal/ANIM.slow;
+  for (let k = 0; k < 4; k++){ const pr = 2*Math.PI*GEO[k].rm/GEO[k].Z_rotor; ANIM.phase[k] = (ANIM.phase[k] + omega*GEO[k].rm*dv) % pr; }
+  ANIM.shaft = (ANIM.shaft + N/60*dtReal*0.02) % 1;
+
+  /* ---- colour field in the annulus */
+  const F = FIELD[ANIM.field], vals = F.get(e);
+  let lo = F.lo, hi = F.hi;
+  if (ANIM.field === 'T0'){ lo = e.TaK - 273.15; hi = lo + 20; }
+  const sA = -0.035, sB = 0.150, step = Math.max(2, W/400);
+  for (let px = X(sA); px < X(sB); px += step){
+    const s = (px - X(sA))/L.kx + sA, v = interpStations(vals, s);
+    ctx.fillStyle = cmap((v - lo)/(hi - lo));
+    ctx.fillRect(px, L.Yt, step + 0.6, Y(rhub(s)) - L.Yt);
+  }
+  /* ---- hub body, shaft, centre line */
+  ctx.fillStyle = tok.hub;
+  ctx.beginPath(); ctx.moveTo(X(-0.035), L.Yc);
+  for (let s = -0.035; s <= 0.150; s += 0.002) ctx.lineTo(X(s), Y(rhub(s)));
+  ctx.lineTo(X(0.150), L.Yc); ctx.closePath(); ctx.fill();
+  // nose cone
+  ctx.beginPath(); ctx.moveTo(X(-0.035), Y(rhub(0))); ctx.quadraticCurveTo(X(-0.055), L.Yc - 0.02*H, X(-0.050), L.Yc); ctx.lineTo(X(-0.035), L.Yc); ctx.fill();
+  ctx.strokeStyle = tok['ink-3']; ctx.setLineDash([12, 4, 2, 4]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, L.Yc + 0.5); ctx.lineTo(W, L.Yc + 0.5); ctx.stroke(); ctx.setLineDash([]);
+  // shaft through the rear frame to the coupling and motor, with moving marks to show rotation
+  const shY0 = L.Yc - 0.03*H, xm0 = 0.80*W, xm1 = 0.975*W;
+  ctx.fillStyle = tok.metal; ctx.fillRect(X(0.150), shY0, xm0 - X(0.150), L.Yc - shY0);
+  ctx.save(); ctx.beginPath(); ctx.rect(X(0.150), shY0, xm0 - X(0.150), L.Yc - shY0); ctx.clip();
+  ctx.strokeStyle = tok.ink; ctx.globalAlpha = 0.35; ctx.lineWidth = 2;
+  const sp = 0.02*W, off = ANIM.shaft*sp*8 % sp;
+  for (let x = X(0.150) - sp + off; x < xm0; x += sp){ ctx.beginPath(); ctx.moveTo(x, shY0); ctx.lineTo(x + 0.4*sp, L.Yc); ctx.stroke(); }
+  ctx.restore();
+  // rear bearing frame and coupling
+  ctx.fillStyle = tok['metal-2']; ctx.fillRect(X(0.158), L.Yt - 0.02*H, 0.012*W, L.Yc - L.Yt + 0.02*H);
+  ctx.fillStyle = tok.metal; ctx.fillRect(xm0 - 0.03*W, shY0 - 0.015*H, 0.025*W, L.Yc - shY0 + 0.015*H);
+  // front bearing struts in the inlet
+  ctx.fillStyle = tok['metal-2']; ctx.globalAlpha = 0.8; ctx.fillRect(X(-0.028), L.Yt, 0.006*W, Y(rhub(0)) - L.Yt); ctx.globalAlpha = 1;
+
+  /* ---- blades (meridional view) */
+  for (let k = 0; k < 4; k++){
+    const g = GEO[k];
+    const rows = [[0.032*k + 0.002, 0.032*k + 0.016, true], [0.032*k + 0.017, 0.032*k + 0.031, false]];
+    rows.forEach(([s0, s1, rot]) => {
+      const pts = [[X(s0), Y(rhub(s0)) - 1], [X(s0) + 0.15*(X(s1) - X(s0)), L.Yt + 2], [X(s1), L.Yt + 2], [X(s1) - 0.1*(X(s1) - X(s0)), Y(rhub(s1)) - 1]];
+      ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath();
+      ctx.fillStyle = rot ? tok.metal : tok['metal-2']; ctx.globalAlpha = 0.88; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = tok.ink; ctx.lineWidth = 0.8; ctx.stroke();
+      if (rot && N > 50){ // passing-blade shading: bands sweep radially at blade-passing rate (stroboscopic)
+        ctx.save(); ctx.clip(); ctx.globalAlpha = 0.28; ctx.fillStyle = tok.ink;
+        const bandH = (Y(rhub(s0)) - L.Yt)/3, ph = ANIM.phase[k]/(2*Math.PI*g.rm/g.Z_rotor);
+        for (let b = -1; b < 4; b++){ const y = L.Yt + (b + ph)*bandH; ctx.fillRect(X(s0), y, X(s1) - X(s0), bandH*0.35); }
+        ctx.restore();
+      }
+    });
+    // stage label and loading chip above the casing
+    const cx = X(0.032*k + 0.016), dP = (e.P0[2*k + 2] - e.P0[2*k])/1e3, dT = e.T0[2*k + 2] - e.T0[2*k], DF = e.DF[k];
+    const dfc = DF > 0.55 ? tok.alarm : DF > 0.48 ? tok.warn : tok.ok;
+    ctx.fillStyle = tok.ink; ctx.font = font(600, fs*1.0); ctx.textAlign = 'center';
+    ctx.fillText(`Stage ${k + 1}`, cx, L.Yt - L.casT - fs*4.0);
+    ctx.font = mono(fs*0.78); ctx.fillStyle = tok['ink-2'];
+    ctx.fillText(`ΔP₀ ${dP.toFixed(2)} kPa`, cx, L.Yt - L.casT - fs*2.95);
+    ctx.fillText(`ΔT₀ ${dT.toFixed(2)} K`, cx, L.Yt - L.casT - fs*1.95);
+    ctx.fillStyle = dfc; ctx.fillText(N > 1000 ? `DF ${DF.toFixed(2)} · i ${e.ir[k] >= 0 ? '+' : ''}${e.ir[k].toFixed(1)}°` : 'DF –', cx, L.Yt - L.casT - fs*0.85);
+    ctx.font = font(600, fs*0.8); ctx.fillStyle = tok['ink-2'];
+    ctx.fillText(`R${k + 1}`, X(0.032*k + 0.009), Y(rhub(0.032*k + 0.009)) + fs*1.1);
+    ctx.fillText(`S${k + 1}`, X(0.032*k + 0.024), Y(rhub(0.032*k + 0.024)) + fs*1.1);
+  }
+  ctx.textAlign = 'left';
+
+  /* ---- PLA casing wall coloured by the thermal ROM (EST) */
+  const cas = casingField(S.thA), TaC = e.TaK - 273.15;
+  for (let i = 0; i < TH.x.length - 1; i++){
+    const s0 = TH.x[i], s1 = TH.x[i + 1], T = TaC + 0.5*(cas[i] + cas[i + 1]);
+    ctx.fillStyle = heat((T - TaC)/Math.max(PLA_LIMIT - TaC, 5));
+    ctx.fillRect(X(s0), L.Yt - L.casT, X(s1) - X(s0) + 0.8, L.casT);
+  }
+  ctx.fillStyle = tok['metal-2']; ctx.fillRect(X(-0.035), L.Yt - L.casT, X(0) - X(-0.035), L.casT); ctx.fillRect(X(0.128), L.Yt - L.casT, X(0.150) - X(0.128), L.casT);
+  ctx.strokeStyle = tok.ink; ctx.lineWidth = 1; ctx.strokeRect(X(-0.035), L.Yt - L.casT, X(0.150) - X(-0.035), L.casT);
+  const casMax = TaC + Math.max(...cas);
+  ctx.font = mono(fs*0.8); ctx.fillStyle = tok['ink-2'];
+  ctx.fillText(`PLA casing wall: max ${casMax.toFixed(1)} °C (EST, limit ${PLA_LIMIT} °C)`, X(0), L.Yt - L.casT - fs*5.6);
+  // bellmouth lip
+  ctx.strokeStyle = tok.ink; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(X(-0.035), L.Yt - L.casT); ctx.quadraticCurveTo(X(-0.043), L.Yt - L.casT, X(-0.044), L.Yt - L.casT - 0.035*H); ctx.stroke();
+
+  /* ---- outlet duct and valve */
+  const dx0 = X(0.136), dx1 = X(0.150), top = 0.05*H;
+  const ductInterp = Math.max(0, e.Ca[NS - 1]);
+  ctx.fillStyle = cmap((vals[NS - 1] - lo)/(hi - lo)); ctx.fillRect(dx0, top, dx1 - dx0, L.Yt - L.casT - top);
+  ctx.strokeStyle = tok.ink; ctx.lineWidth = 1.5; ctx.strokeRect(dx0, top, dx1 - dx0, L.Yt - L.casT - top);
+  const vy = 0.13*H, ang = (1 - clamp((S.phi - 0.9)/0.7, 0, 1))*70*Math.PI/180, half = (dx1 - dx0)/2;
+  ctx.save(); ctx.translate((dx0 + dx1)/2, vy); ctx.rotate(Math.PI/2 - ang);
+  ctx.strokeStyle = tok.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-half*0.95, 0); ctx.lineTo(half*0.95, 0); ctx.stroke();
+  ctx.fillStyle = tok.ink; ctx.beginPath(); ctx.arc(0, 0, 3, 0, 7); ctx.fill(); ctx.restore();
+  ctx.font = font(600, fs*0.9); ctx.fillStyle = tok.ink; ctx.fillText(`Outlet valve ${(S.phi*100).toFixed(0)} %`, dx1 + 8, vy + 4);
+  ctx.font = mono(fs*0.82); ctx.fillStyle = tok['ink-2'];
+  ctx.fillText(`P₀ ${(e.Pout/1e3).toFixed(2)} kPa · T₀ ${(e.Tout - 273.15).toFixed(2)} °C`, dx1 + 8, vy + 4 + fs*1.25);
+  ctx.fillText(`PR ${e.PR.toFixed(4)} · ṁ ${e.m.toFixed(4)} kg/s`, dx1 + 8, vy + 4 + fs*2.4);
+  // inlet labels
+  ctx.font = font(600, fs*0.9); ctx.fillStyle = tok.ink; ctx.fillText('Inlet', 0.02*W, 0.17*H);
+  ctx.font = mono(fs*0.82); ctx.fillStyle = tok['ink-2'];
+  ctx.fillText(`T ${(e.TaK - 273.15).toFixed(1)} °C`, 0.02*W, 0.17*H + fs*1.2); ctx.fillText(`p ${(e.PaPa/1e3).toFixed(2)} kPa`, 0.02*W, 0.17*H + fs*2.3);
+
+  /* ---- motor */
+  const mt = S.motEst.Tw, mest = S.mest || {tq: 0, Ib: 0, Pe: 0};
+  const my0 = L.Yc - 0.30*H;
+  ctx.fillStyle = tok.metal; roundRect(ctx, xm0, my0, xm1 - xm0, L.Yc - my0, 8); ctx.fill();
+  ctx.globalAlpha = 0.55; ctx.fillStyle = heat((mt - TaC)/Math.max(MOTOR.Tlim - TaC, 10)); roundRect(ctx, xm0 + 4, my0 + 4, xm1 - xm0 - 8, L.Yc - my0 - 8, 6); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.fillStyle = tok.ink; ctx.font = font(700, fs*0.95); ctx.fillText('BLDC motor', xm0 + 8, my0 + fs*1.4);
+  ctx.font = mono(fs*0.8);
+  [`${Math.round(N).toLocaleString()} rpm`, `τ ${mest.tq.toFixed(2)} N·m`, `I_batt ${mest.Ib.toFixed(1)} A`, `P_el ${(mest.Pe/1e3).toFixed(2)} kW`, `winding ${mt.toFixed(0)} °C`].forEach((t, i) => ctx.fillText(t, xm0 + 8, my0 + fs*(2.7 + 1.15*i)));
+  ctx.font = font(500, fs*0.72); ctx.fillStyle = tok['ink-2']; ctx.fillText('EST: motor model', xm0 + 8, L.Yc - 6);
+
+  /* ---- meridional tracers */
+  ctx.fillStyle = tok.bg === '#0D1419' ? '#ffffff' : '#ffffff';
+  const surgeFlow = surge ? Math.sin(2*Math.PI*3.2*S.t) : 1;
+  ANIM.mp.forEach(p => {
+    let v;
+    if (p.up){ v = Math.max(ductInterp, 2)*0.8; p.up += v*dv/ (L.Yt - top) * L.kx; }
+    else {
+      const ca = interpStations(e.Ca, Math.max(p.s, 0));
+      v = p.s < 0 ? ca*(0.45 + 0.55*(p.s + 0.035)/0.035) : ca;
+      p.s += v*dv*surgeFlow;
+      if (p.s > 0.137 + 0.012*p.r) p.up = 1e-6;
+      if (p.s < -0.035) p.s = 0.12;
+    }
+    if (p.up > 1 || N < 30 && rnd() < 0.002){ p.s = -0.035 - 0.004*rnd(); p.up = 0; p.r = 0.06 + 0.88*rnd(); }
+    let px, py;
+    if (p.up){ px = X(0.137) + (X(0.149) - X(0.137))*p.r; py = (L.Yt - L.casT) - p.up*(L.Yt - L.casT - top); }
+    else { px = X(p.s); const yh = Y(rhub(Math.max(Math.min(p.s, 0.150), -0.035))); py = L.Yt + 3 + p.r*(yh - L.Yt - 6); }
+    ctx.globalAlpha = 0.85; ctx.fillStyle = surge ? tok.alarm : '#ffffff'; ctx.beginPath(); ctx.arc(px, py, 1.6, 0, 7); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  /* ---- field legend */
+  const lgX = 0.02*W, lgY = 0.045*H, lgW = 0.16*W, lgH = 0.016*H;
+  for (let i = 0; i < 60; i++){ ctx.fillStyle = cmap(i/59); ctx.fillRect(lgX + i*lgW/60, lgY, lgW/60 + 0.6, lgH); }
+  ctx.strokeStyle = tok.ink; ctx.lineWidth = 0.8; ctx.strokeRect(lgX, lgY, lgW, lgH);
+  ctx.fillStyle = tok['ink-2']; ctx.font = mono(fs*0.75);
+  ctx.fillText(lo.toFixed(ANIM.field === 'Ca' ? 0 : 1), lgX, lgY + lgH + fs*1.1); ctx.textAlign = 'right'; ctx.fillText(hi.toFixed(ANIM.field === 'Ca' ? 0 : 1), lgX + lgW, lgY + lgH + fs*1.1); ctx.textAlign = 'left';
+  ctx.font = font(600, fs*0.8); ctx.fillStyle = tok.ink; ctx.fillText('Field: ' + F.label, lgX, lgY - fs*0.4);
+
+  /* ---- cascade (blade-to-blade) view at mean radius */
+  const c0 = L.casY0, c1 = L.casY1, ch = c1 - c0;
+  ctx.fillStyle = tok.panel; ctx.fillRect(X(-0.035), c0, X(0.150) - X(-0.035), ch);
+  ctx.strokeStyle = tok.line; ctx.strokeRect(X(-0.035), c0, X(0.150) - X(-0.035), ch);
+  ctx.save(); ctx.beginPath(); ctx.rect(X(-0.035), c0, X(0.150) - X(-0.035), ch); ctx.clip();
+  const spanM = ch/L.kx;                                   // circumferential extent shown (m)
+  for (let k = 0; k < 4; k++){
+    const g = GEO[k], pitchR = 2*Math.PI*g.rm/g.Z_rotor, pitchS = 2*Math.PI*g.rm/g.Z_stator;
+    const sR0 = 0.032*k + 0.002, sS0 = 0.032*k + 0.017, c = 0.014;
+    const rotK1 = g.kappa1_rotor_deg, rotK2 = g.beta2_deg, staK1 = g.kappa1_stator_deg, staK2 = g.alpha3_deg;
+    const shiftR = ANIM.phase[k];
+    for (let y = -pitchR; y < spanM + 2*pitchR; y += pitchR) blade(ctx, X(sR0), c0 + (y - shiftR)*L.kx, c*L.kx, rotK1, rotK2, +1, tok.metal, tok.ink);
+    for (let y = -pitchS; y < spanM + 2*pitchS; y += pitchS) blade(ctx, X(sS0), c0 + y*L.kx, c*L.kx, staK1, staK2, -1, tok['metal-2'], tok.ink);
+  }
+  // tracers with the absolute velocity (Ca, Cu); U points up the screen
+  ANIM.cp.forEach(p => {
+    const ca = p.s < 0 ? e.Ca[0] : interpStations(e.Ca, p.s), cu = cuAt(p.s, e, omega);
+    p.s += ca*dv*surgeFlow; p.y = (p.y - cu*dv/spanM*surgeFlow + 10) % 1;
+    if (p.s > 0.150) { p.s = -0.035; p.y = rnd(); } if (p.s < -0.035) p.s = 0.149;
+    ctx.fillStyle = surge ? tok.alarm : tok.est; ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.arc(X(p.s), c0 + p.y*ch, 1.8, 0, 7); ctx.fill();
+  });
+  ctx.restore(); ctx.globalAlpha = 1;
+  ctx.fillStyle = tok['ink-2']; ctx.font = font(600, fs*0.85);
+  ctx.fillText('Blade-to-blade view at mean radius (rotor rows move, stator rows fixed)', X(-0.035), c0 - fs*0.5);
+  // U arrow
+  const ax = X(0.150) + 14, ay = c0 + ch*0.75;
+  ctx.strokeStyle = tok.ink; ctx.fillStyle = tok.ink; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax, ay - 0.10*H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ax - 5, ay - 0.10*H + 8); ctx.lineTo(ax, ay - 0.10*H); ctx.lineTo(ax + 5, ay - 0.10*H + 8); ctx.stroke();
+  ctx.font = mono(fs*0.8); ctx.fillText(`U = ${(omega*GEO[0].rm).toFixed(1)} m/s`, ax + 8, ay - 0.05*H);
+  ctx.fillText('rotor motion', ax + 8, ay - 0.05*H + fs*1.1);
+  ctx.fillText(`slowed ${ANIM.slow}×`, ax + 8, ay - 0.05*H + fs*2.2);
+  if (surge){ ctx.fillStyle = tok.alarm; ctx.globalAlpha = 0.10 + 0.08*Math.sin(S.t*20); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+  ctx.restore();
+}
+function roundRect(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+// cambered blade: camber angle varies linearly from k1 to k2 (deg from axial); dir +1 = rotor (turns towards +y screen), -1 = stator
+function blade(ctx, x0, y0, len, k1, k2, dir, fill, stroke){
+  const n = 12, pts = [[x0, y0]]; let x = x0, y = y0;
+  for (let i = 0; i < n; i++){ const a = (k1 + (k2 - k1)*(i + 0.5)/n)*Math.PI/180, dx = len/n; x += dx; y += dir*dx*Math.tan(a); pts.push([x, y]); }
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = stroke; ctx.lineWidth = Math.max(3.2, len*0.13); ctx.globalAlpha = 0.5;
+  ctx.beginPath(); pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
+  ctx.strokeStyle = fill; ctx.lineWidth = Math.max(2, len*0.10); ctx.globalAlpha = 1; ctx.stroke();
+}
+
+/* ------------------------------------------------------------------ velocity triangles */
+function drawTriangles(ctx, W, H, tok, k, fsScale = 1){
+  ctx.clearRect(0, 0, W, H); ctx.fillStyle = tok.panel; ctx.fillRect(0, 0, W, H);
+  const fs = 11*fsScale, e = S.est;
+  if (!e || e.N < 500){ ctx.fillStyle = tok['ink-2']; ctx.font = `${fs*1.1}px "IBM Plex Sans",sans-serif`; ctx.fillText('Speed too low to draw the triangles', 14*fsScale, 30*fsScale); return; }
+  const g = GEO[k], U = e.N*2*Math.PI/60*g.rm, Ca1 = e.Ca[2*k], Ca2 = e.Ca[2*k + 1];
+  const Cu1 = Ca1*Math.tan(g.alpha1_deg*Math.PI/180), Cu2 = U - Ca2*Math.tan(g.beta2_deg*Math.PI/180);
+  const b1 = Math.atan2(U - Cu1, Ca1)*180/Math.PI, a2 = Math.atan2(Cu2, Ca2)*180/Math.PI;
+  const top = 0.20*H, avail = 0.52*H, sc = Math.min(0.34*W/Math.max(Ca1, Ca2, 1), avail/(U + Math.max(Cu1, Cu2, 0)));
+  const oy = top + Math.max(Cu1, Cu2, 0)*sc;
+  // legend on one line
+  ctx.font = `${fs*0.9}px "IBM Plex Sans",sans-serif`; let lx = 10*fsScale;
+  [['C absolute', tok.est, []], ['W relative', tok.sim, []], ['U blade', tok.ink, []], ['metal angle κ₁', tok.warn, [5, 4]]].forEach(([t, c, d]) => {
+    ctx.strokeStyle = c; ctx.lineWidth = 2*fsScale; ctx.setLineDash(d.map(v => v*fsScale)); ctx.beginPath(); ctx.moveTo(lx, 12*fsScale); ctx.lineTo(lx + 16*fsScale, 12*fsScale); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = tok['ink-2']; ctx.fillText(t, lx + 20*fsScale, 15*fsScale); lx += 30*fsScale + ctx.measureText(t).width; });
+  const tri = (ox, Ca, Cu, label, metal) => {
+    const C = [ox + Ca*sc, oy - Cu*sc], Wt = [ox + Ca*sc, oy + (U - Cu)*sc];
+    if (metal != null){ const a = metal*Math.PI/180, Lm = 1.05*Math.hypot(Ca, U - Cu)*sc; ctx.setLineDash([5*fsScale, 4*fsScale]); ctx.strokeStyle = tok.warn; ctx.lineWidth = 1.5*fsScale;
+      ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox + Lm*Math.cos(a), oy + Lm*Math.sin(a)); ctx.stroke(); ctx.setLineDash([]); }
+    arrow(ctx, ox, oy, C[0], C[1], tok.est, 2.2*fsScale); arrow(ctx, ox, oy, Wt[0], Wt[1], tok.sim, 2.2*fsScale); arrow(ctx, Wt[0], Wt[1], C[0], C[1], tok.ink, 1.5*fsScale);
+    ctx.fillStyle = tok.ink; ctx.font = `600 ${fs}px "IBM Plex Sans",sans-serif`; ctx.fillText(label, ox, top - Math.max(Cu1, Cu2, 0)*0 - 8*fsScale);
+  };
+  tri(0.06*W, Ca1, Cu1, 'Rotor inlet', g.kappa1_rotor_deg);
+  tri(0.54*W, Ca2, Cu2, 'Rotor exit', null);
+  ctx.font = `${fs*0.88}px "IBM Plex Mono",monospace`; ctx.fillStyle = tok['ink-2'];
+  const lines = [`U ${U.toFixed(1)} m/s · Cₐ₁ ${Ca1.toFixed(1)} · Cₐ₂ ${Ca2.toFixed(1)} m/s · DF ${e.DF[k].toFixed(3)}`,
+    `β₁ ${b1.toFixed(1)}° vs metal κ₁ ${g.kappa1_rotor_deg.toFixed(1)}°  →  incidence ${(b1 - g.kappa1_rotor_deg >= 0 ? '+' : '')}${(b1 - g.kappa1_rotor_deg).toFixed(1)}°`,
+    `α₂ ${a2.toFixed(1)}° · β₂ ${g.beta2_deg.toFixed(1)}° · ΔT₀ = λU(Cᵤ₂ − Cᵤ₁)/cₚ = ${(g.lam*U*(Cu2 - Cu1)/CP).toFixed(2)} K`];
+  lines.forEach((t, i) => ctx.fillText(t, 10*fsScale, H - (lines.length - i - 0.3)*fs*1.4));
+}
+function arrow(ctx, x0, y0, x1, y1, c, w){
+  ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  const a = Math.atan2(y1 - y0, x1 - x0), L = 8 + w*2; ctx.beginPath(); ctx.moveTo(x1, y1);
+  ctx.lineTo(x1 - L*Math.cos(a - 0.35), y1 - L*Math.sin(a - 0.35)); ctx.lineTo(x1 - L*Math.cos(a + 0.35), y1 - L*Math.sin(a + 0.35)); ctx.closePath(); ctx.fill();
+}
+
+/* ------------------------------------------------------------------ chart plotter */
+function niceTicks(lo, hi, n = 5){
+  if (!(hi > lo)){ hi = lo + 1; }
+  const raw = (hi - lo)/n, mag = Math.pow(10, Math.floor(Math.log10(raw))), r = raw/mag;
+  const st = (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10)*mag, t = [];
+  for (let v = Math.ceil(lo/st - 1e-9)*st; v <= hi + st*1e-6; v += st) t.push(+v.toPrecision(12));
+  return {t, st};
+}
+function fmtTick(v, st){ const d = Math.max(0, -Math.floor(Math.log10(st) + 1e-9)); return Math.abs(v) >= 10000 ? v.toLocaleString(undefined, {maximumFractionDigits: 0}) : v.toFixed(Math.min(d, 5)); }
+function plot(ctx, W, H, tok, spec, fsScale = 1){
+  ctx.save(); ctx.clearRect(0, 0, W, H); ctx.fillStyle = tok.panel; ctx.fillRect(0, 0, W, H);
+  const fs = 11*fsScale, padL = 56*fsScale, padR = (spec.y2 ? 50 : 22)*fsScale, padB = 38*fsScale;
+  // legend layout first (wraps onto extra lines), so the plot area starts below it
+  ctx.font = `${fs*0.95}px "IBM Plex Sans",sans-serif`;
+  const legItems = []; { let lx = padL + 2*fsScale, line = 0;
+    spec.series.filter(s => s.label).forEach(s => { const w = 28*fsScale + ctx.measureText(s.label).width; if (lx + w > W - 6*fsScale && lx > padL + 2*fsScale){ line++; lx = padL + 2*fsScale; } legItems.push({s, x: lx, line}); lx += w; }); }
+  const nLeg = legItems.length ? Math.max(...legItems.map(i => i.line)) + 1 : 0, padT = (12 + nLeg*14)*fsScale;
+  const pw = W - padL - padR, ph = H - padT - padB;
+  const all = (k, ser) => ser.flatMap(s => (s[k] || []).filter(v => v != null && isFinite(v)));
+  const bandVals = spec.series.flatMap(s => s.band ? [...s.band.lo, ...s.band.hi].filter(v => v != null && isFinite(v)) : []);
+  let xs = all('x', spec.series), ys = all('y', spec.series.filter(s => !s.axis2)).concat(bandVals, (spec.hlines || []).map(h => h.y));
+  if (!xs.length){ ctx.fillStyle = tok['ink-2']; ctx.font = `${fs*1.1}px "IBM Plex Sans",sans-serif`; ctx.fillText(spec.empty || 'No data yet', padL, padT + 20*fsScale); ctx.restore(); return; }
+  let [x0, x1] = spec.x || [Math.min(...xs), Math.max(...xs)], [y0, y1] = spec.y || [Math.min(...ys), Math.max(...ys)];
+  if (x1 - x0 < 1e-12){ x0 -= 1; x1 += 1; }
+  if (!spec.y){ const pad = (y1 - y0)*0.08 || Math.abs(y0)*0.01 || 1; y0 -= pad; y1 += pad; if (spec.y0zero) y0 = Math.min(0, y0); }
+  const X = v => padL + (v - x0)/(x1 - x0)*pw, Y = v => padT + ph - (v - y0)/(y1 - y0)*ph;
+  let Y2 = null, ys2 = null;
+  if (spec.y2){ const v2 = all('y', spec.series.filter(s => s.axis2)); let a = spec.y2.lim ? spec.y2.lim[0] : Math.min(...v2), b = spec.y2.lim ? spec.y2.lim[1] : Math.max(...v2); if (!spec.y2.lim){ const p = (b - a)*0.08 || 1; a -= p; b += p; } ys2 = [a, b]; Y2 = v => padT + ph - (v - a)/(b - a)*ph; }
+  // grid and ticks
+  ctx.font = `${fs}px "IBM Plex Mono",monospace`; ctx.lineWidth = 1;
+  const tx = niceTicks(x0, x1, spec.xticks || 6), ty = niceTicks(y0, y1, 5);
+  ctx.strokeStyle = tok.line; ctx.fillStyle = tok['ink-2'];
+  ty.t.forEach(v => { if (v < y0 - 1e-12 || v > y1 + 1e-12) return; const y = Math.round(Y(v)) + 0.5; ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + pw, y); ctx.stroke(); ctx.textAlign = 'right'; ctx.fillText(fmtTick(v, ty.st), padL - 6*fsScale, y + fs*0.35); });
+  tx.t.forEach(v => { if (v < x0 - 1e-12 || v > x1 + 1e-12) return; const x = Math.round(X(v)) + 0.5; ctx.globalAlpha = 0.55; ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + ph); ctx.stroke(); ctx.globalAlpha = 1; ctx.textAlign = 'center'; ctx.fillText(spec.xfmt ? spec.xfmt(v) : fmtTick(v, tx.st), x, padT + ph + fs*1.45); });
+  if (Y2){ const t2 = niceTicks(ys2[0], ys2[1], 5); ctx.textAlign = 'left'; t2.t.forEach(v => { if (v < ys2[0] || v > ys2[1]) return; ctx.fillText(fmtTick(v, t2.st), padL + pw + 6*fsScale, Y2(v) + fs*0.35); }); }
+  ctx.strokeStyle = tok['ink-3']; ctx.strokeRect(padL + 0.5, padT + 0.5, pw, ph);
+  ctx.fillStyle = tok['ink-2']; ctx.font = `500 ${fs}px "IBM Plex Sans",sans-serif`; ctx.textAlign = 'center';
+  ctx.fillText(spec.xlabel || '', padL + pw/2, H - 6*fsScale);
+  ctx.save(); ctx.translate(13*fsScale, padT + ph/2); ctx.rotate(-Math.PI/2); ctx.fillText(spec.ylabel || '', 0, 0); ctx.restore();
+  if (spec.y2){ ctx.save(); ctx.translate(W - 8*fsScale, padT + ph/2); ctx.rotate(Math.PI/2); ctx.fillText(spec.y2.label || '', 0, 0); ctx.restore(); }
+  ctx.textAlign = 'left';
+  ctx.save(); ctx.beginPath(); ctx.rect(padL, padT, pw, ph); ctx.clip();
+  (spec.hlines || []).forEach(h => { ctx.strokeStyle = col(tok, h.color); ctx.setLineDash(h.dash || [5, 4]); ctx.lineWidth = 1.2*fsScale; const y = Y(h.y); ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + pw, y); ctx.stroke(); ctx.setLineDash([]);
+    if (h.label){ ctx.fillStyle = col(tok, h.color); ctx.font = `${fs*0.9}px "IBM Plex Sans",sans-serif`; ctx.fillText(h.label, padL + 6*fsScale, y - 4*fsScale); } });
+  spec.series.forEach(s => {
+    const c = col(tok, s.color), YY = s.axis2 ? Y2 : Y;
+    if (s.band){ ctx.fillStyle = c; ctx.globalAlpha = 0.15; ctx.beginPath(); let started = false;
+      s.x.forEach((xv, i) => { const v = s.band.hi[i]; if (v == null) return; started ? ctx.lineTo(X(xv), YY(v)) : (ctx.moveTo(X(xv), YY(v)), started = true); });
+      for (let i = s.x.length - 1; i >= 0; i--){ const v = s.band.lo[i]; if (v != null) ctx.lineTo(X(s.x[i]), YY(v)); } ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1; }
+    if (s.line !== false){ ctx.strokeStyle = c; ctx.lineWidth = (s.width || 1.6)*fsScale; ctx.setLineDash((s.dash || []).map(d => d*fsScale)); ctx.globalAlpha = s.alpha || 1;
+      ctx.beginPath(); let pen = false;
+      s.x.forEach((xv, i) => { const yv = s.y[i]; if (yv == null || !isFinite(yv) || xv == null){ pen = false; return; } const px = X(xv), py = YY(yv); pen ? ctx.lineTo(px, py) : ctx.moveTo(px, py); pen = true; });
+      ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; }
+    if (s.marker){ ctx.fillStyle = s.hollow ? tok.panel : c; ctx.strokeStyle = c; ctx.lineWidth = 1.3*fsScale; const r = (s.msize || 3.2)*fsScale;
+      s.x.forEach((xv, i) => { const yv = s.y[i]; if (yv == null || !isFinite(yv)) return; const px = X(xv), py = YY(yv); ctx.beginPath();
+        if (s.marker === 's') ctx.rect(px - r, py - r, 2*r, 2*r); else if (s.marker === 'd'){ ctx.moveTo(px, py - r*1.4); ctx.lineTo(px + r*1.4, py); ctx.lineTo(px, py + r*1.4); ctx.lineTo(px - r*1.4, py); ctx.closePath(); } else ctx.arc(px, py, r, 0, 7);
+        ctx.fill(); ctx.stroke(); }); }
+    if (s.labels){ ctx.fillStyle = c; ctx.font = `${fs*0.85}px "IBM Plex Mono",monospace`; s.labels.forEach((t, i) => { if (t && s.y[i] != null) ctx.fillText(t, X(s.x[i]) + 4*fsScale, Y(s.y[i]) - 4*fsScale); }); }
+  });
+  ctx.restore();
+  // legend
+  ctx.font = `${fs*0.95}px "IBM Plex Sans",sans-serif`;
+  legItems.forEach(({s, x: lx, line}) => { const ly = (10 + line*14)*fsScale, c = col(tok, s.color); ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = 2*fsScale; ctx.setLineDash((s.dash || []).map(d => d*fsScale));
+    if (s.line !== false){ ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx + 16*fsScale, ly); ctx.stroke(); } else { ctx.beginPath(); ctx.arc(lx + 8*fsScale, ly, 3*fsScale, 0, 7); ctx.fill(); }
+    ctx.setLineDash([]); ctx.fillStyle = tok['ink-2']; ctx.fillText(s.label, lx + 20*fsScale, ly + fs*0.35); });
+  ctx.restore();
+}
+
+'use strict';
+/* =====================================================================================================
+   ui.js: views, controls, KPI tiles, deviation panel, charts, records (db), uploads and exports.
+   ===================================================================================================== */
+const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
+const fmt = (v, d = 2) => v == null || !isFinite(v) ? '–' : (+v).toLocaleString(undefined, {minimumFractionDigits: d, maximumFractionDigits: d});
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2600); }
+readTokens();
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTokens); } catch (e) {}
+new MutationObserver(readTokens).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+
+/* ------------------------------------------------------------------ capabilities (db, user, downloads, assets) */
+const CAP = {db: null, user: null, dl: null, assets: null, canWrite: true, ready: false};
+const REC = {experiments: [], checklist: [], datasets: [], design: null, memDatasets: []};
+(async () => {
+  if (!window.claude || !window.claude.use){ setStorageNote(); return; }
+  const [db, user, dl, assets] = await Promise.all(['db', 'user', 'downloads', 'assets'].map(n => window.claude.use(n).catch(() => null)));
+  Object.assign(CAP, {db, user, dl, assets, ready: true});
+  if (user && user.can){ try { const w = await user.can('data.write'); if (w === false) CAP.canWrite = false; } catch (e) {} }
+  setStorageNote();
+  if (db) subscribeAll();
+})();
+function setStorageNote(){
+  const msg = !CAP.db ? 'Saving is not available in this view: entries stay until the page reloads.' : !CAP.canWrite ? 'You can view the records; your sharing level does not allow changes.' : '';
+  ['#lg-status', '#design-status'].forEach(s => { const el = $(s); if (el && msg) el.textContent = msg; });
+  if (!CAP.canWrite) $$('#log-form button[type=submit], #ck-form button, #design-save, #ds-delete').forEach(b => b.disabled = true);
+}
+function subscribeAll(){
+  const db = CAP.db, timer = setTimeout(() => { $('#lg-status').textContent = 'The record store is not answering yet; entries may be out of date.'; }, 10000);
+  db.collection('experiments').orderBy('created_at', 'desc').limit(500).onSnapshot(s => { clearTimeout(timer); REC.experiments = s.docs.map(d => Object.assign({id: d.id}, d.data())); renderLog(); }, err => console.warn(err));
+  db.collection('checklist').orderBy('order').onSnapshot(s => { REC.checklist = s.docs.map(d => Object.assign({id: d.id}, d.data())); renderChecklist(); }, err => console.warn(err));
+  db.doc('design/reference').onSnapshot(s => { REC.design = s.exists ? s.data() : null; renderDesignForm(); }, err => console.warn(err));
+  db.collection('datasets').orderBy('uploaded_at', 'desc').limit(40).onSnapshot(s => { REC.datasets = s.docs.map(d => Object.assign({id: d.id}, d.data())); renderDatasetSelect(); }, err => console.warn(err));
+}
+async function save(filename, data, label){
+  if (CAP.dl){ try { await CAP.dl.save({filename, data}); toast(`Saved ${filename}`); return; } catch (e){ if (e && e.code === 'declined') return; } }
+  if (typeof data === 'string') showText(label || filename, data); else showImage(label || filename, data);
+}
+function showText(title, text){
+  const m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = `<div class="box"><div class="card-h"><h2>${esc(title)}</h2><button class="btn sm" type="button">Close</button></div><p class="small muted" style="margin-bottom:8px">Downloads are not available in this view. Select the text and copy it.</p><textarea readonly></textarea></div>`;
+  m.querySelector('textarea').value = text; m.querySelector('button').onclick = () => m.remove(); m.onclick = e => { if (e.target === m) m.remove(); };
+  document.body.appendChild(m); m.querySelector('textarea').select();
+}
+function showImage(title, blob){
+  const m = document.createElement('div'); m.className = 'modal'; const url = URL.createObjectURL(blob);
+  m.innerHTML = `<div class="box"><div class="card-h"><h2>${esc(title)}</h2><button class="btn sm" type="button">Close</button></div><img alt="${esc(title)}" src="${url}" style="width:100%;border:1px solid var(--line);border-radius:6px"></div>`;
+  m.querySelector('button').onclick = () => m.remove(); document.body.appendChild(m);
+}
+async function copyText(text, what){
+  try { await navigator.clipboard.writeText(text); toast(`${what} copied`); } catch (e){ showText(what, text); }
+}
+
+/* ------------------------------------------------------------------ routing */
+function route(){
+  const v = (location.hash || '#twin').slice(1), ok = ['twin', 'compare', 'log', 'checklist', 'rom', 'report'].includes(v) ? v : 'twin';
+  $$('.view').forEach(s => s.classList.toggle('on', s.id === 'view-' + ok));
+  $$('.tabs a').forEach(a => a.setAttribute('aria-current', a.dataset.view === ok ? 'page' : 'false'));
+  VIEW = ok; if (ok === 'rom') renderRomPage(); if (ok === 'report') renderReport(); if (ok === 'compare'){ renderDesignForm(); renderDatasetSelect(); }
+  setTimeout(() => renderCharts(true), 30);
+}
+let VIEW = 'twin';
+window.addEventListener('hashchange', route);
+
+/* ------------------------------------------------------------------ controls */
+function bindRange(id, out, f, setter){ const el = $(id); const upd = () => { const v = +el.value; $(out).textContent = f(v); setter(v); }; el.addEventListener('input', upd); upd(); }
+bindRange('#in-n', '#v-n', v => `${v.toLocaleString()} rpm`, v => S.Nman = v);
+bindRange('#in-pr', '#v-pr', v => v.toFixed(3), v => S.PRset = v);
+bindRange('#in-ta', '#v-ta', v => `${v.toFixed(1)} °C`, v => S.TaC = v);
+bindRange('#in-pa', '#v-pa', v => `${v.toFixed(2)} kPa`, v => S.PaK = v);
+bindRange('#in-phi', '#v-phi', v => `${Math.round(v*100)} %`, v => S.phi = v);
+bindRange('#in-sev', '#v-sev', v => `${Math.round(v*100)} %`, v => S.sev = v);
+$('#fault').addEventListener('change', e => { S.fault = e.target.value; Object.keys(S.cus).forEach(k => S.cus[k] = {hi: 0, lo: 0}); });
+$('#bellmouth').addEventListener('change', e => { S.bellmouth = e.target.checked; });
+function segBind(sel, key, fn){ $$(sel + ' button').forEach(b => b.addEventListener('click', () => { $$(sel + ' button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); fn(b.dataset[key]); })); }
+segBind('#field-seg', 'f', v => ANIM.field = v);
+segBind('#speed-seg', 's', v => S.speed = +v);
+segBind('#mode-seg', 'm', v => { S.mode = v; $('#ctl-manual').hidden = v !== 'manual'; $('#ctl-auto').hidden = v !== 'auto'; $('#mode-chip').textContent = v === 'auto' ? 'Holding pressure ratio' : 'Manual speed'; S.I = 0; });
+$('#run-btn').addEventListener('click', () => { S.running = !S.running; $('#run-btn').textContent = S.running ? 'Pause' : 'Run'; });
+$('#btn-reset').addEventListener('click', () => { resetRig(); toast('Rig reset'); });
+$('#btn-baseline').addEventListener('click', () => {
+  S.base = {p: S.kf.x[0], t: S.kf.x[1], m: S.bellmouth ? S.kf.x[2] : 1}; Object.keys(S.cus).forEach(k => S.cus[k] = {hi: 0, lo: 0});
+  toast(`Baseline set: h_p ${S.base.p.toFixed(4)}, h_T ${S.base.t.toFixed(4)}`);
+});
+$('#src').addEventListener('change', e => {
+  if (e.target.value === 'replay'){
+    const ds = currentDataset();
+    if (!ds){ e.target.value = 'rig'; toast('Upload or generate a dataset first (Design & data)'); return; }
+    startReplay(ds);
+  } else stopReplay();
+});
+function startReplay(ds){
+  S.source = 'replay'; S.replay = {rows: ds.rows, kind: ds.kind, name: ds.name, start: S.t, k: 0}; $('#src').value = 'replay';
+  Object.keys(S.cus).forEach(k => S.cus[k] = {hi: 0, lo: 0});
+  $('#src-chip').textContent = ds.kind === 'measured' ? 'Replay: measured log' : 'Replay: simulated log'; $('#src-chip').className = 'chip ' + (ds.kind === 'measured' ? 'ok' : 'info');
+  $('#dev-src-h').innerHTML = ds.kind === 'measured' ? '<span class="tag meas">MEAS</span>' : '<span class="tag sim">SIM</span>';
+  $$('#ctl-manual input, #ctl-auto input, #mode-seg button, #fault, #in-sev').forEach(x => x.disabled = true);
+  location.hash = '#twin'; toast(`Replaying “${ds.name}”`);
+}
+function stopReplay(){
+  S.source = 'rig'; S.replay = null; $('#src').value = 'rig'; $('#src-chip').textContent = 'Virtual rig'; $('#src-chip').className = 'chip info';
+  $('#dev-src-h').innerHTML = '<span class="tag sim">SIM</span>';
+  $$('#ctl-manual input, #ctl-auto input, #mode-seg button, #fault, #in-sev').forEach(x => x.disabled = false);
+}
+
+/* ------------------------------------------------------------------ KPI tiles and deviation panel */
+const srcTag = () => S.meas && S.meas.kind === 'meas' ? '<span class="tag meas">MEAS</span>' : '<span class="tag sim">SIM</span>';
+function kpi(label, tag, v, unit, sub, st){ return `<div class="kpi ${st || ''}"><div class="k"><span>${label}</span>${tag}</div><div class="v">${v}<small>${unit}</small></div><div class="s">${sub || '&nbsp;'}</div></div>`; }
+function renderKPIs(){
+  const m = S.meas, e = S.est, me = S.mest; if (!m || !e) return;
+  const T = '<span class="tag est">EST</span>', M = srcTag(), st = k => status(k);
+  const PRm = m.Pout != null ? m.Pout/m.Pa : null, ToutC = m.Tout != null ? m.Tout - 273.15 : null;
+  const Pe = m.Ib != null && m.Vb != null ? m.Ib*m.Vb : null;
+  let etaM = PRm && m.Tout && m.N > 4000 && Math.abs(m.N - S.Ncmd) < 0.01*S.Ncmd + 50 && Math.abs(m.Tout - S.sens.ToutEstLag - (S.est.Toutb - S.sens.ToutEstLag)) < 0.4 ? (Math.pow(PRm, 1/EXP) - 1)/(m.Tout/(m.TaC + 273.15) - 1) : null;
+  if (etaM != null && (etaM < 0.2 || etaM > 1)) etaM = null;
+  const [u1, u2] = thermalInputs(e), cas = casingTimeToLimit(S.thA, u1, u2, m.TaC), mot = motorTimeToLimit(S.motEst, me.Ploss, m.TaC);
+  const ttl = Math.min(cas.t, mot.t), casMax = m.TaC + Math.max(...casingField(S.thA));
+  const html = [
+    kpi('Rotational speed', M, fmt(m.N, 0), ' rpm', `command ${fmt(S.Ncmd, 0)} · EST ${fmt(S.Nexp, 0)} rpm`, st('N')),
+    kpi('Pressure ratio', M, fmt(PRm, 4), '', `EST ${fmt(e.PRb, 4)} · Δ ${PRm != null ? (PRm - e.PRb >= 0 ? '+' : '') + (PRm - e.PRb).toFixed(4) : '–'}`, st('PR')),
+    kpi('Outlet total pressure', M, fmt(m.Pout != null ? m.Pout/1e3 : null, 2), ' kPa', `EST ${fmt(e.PRb*m.Pa/1e3, 2)} kPa`, st('Pout')),
+    kpi('Outlet total temperature', M, fmt(ToutC, 2), ' °C', `EST ${fmt(S.sens.ToutEstLag - 273.15, 2)} °C (probe lag 3 s)`, st('Tout')),
+    kpi('Ambient (inlet) state', M, fmt(m.TaC, 1), ' °C', `${fmt(m.Pa/1e3, 2)} kPa`, ''),
+    kpi('Mass flow', m.m != null ? M : T, fmt(m.m != null ? m.m : e.mb, 4), ' kg/s', m.m != null ? `EST ${fmt(e.mb, 4)} kg/s` : 'not measured: from the ROM', S.bellmouth ? st('m') : ''),
+    kpi('Isentropic efficiency', T, fmt(e.eta*100, 1), ' %', `from sensors ${etaM != null && isFinite(etaM) ? fmt(etaM*100, 1) + ' %' : '– (needs steady state)'}`, ''),
+    kpi('Shaft power', T, fmt(e.Pshb/1e3, 3), ' kW', `torque ${fmt(me.tq, 2)} N·m`, ''),
+    kpi('Electrical power', Pe != null ? M : T, fmt((Pe != null ? Pe : me.Pe)/1e3, 3), ' kW', `EST ${fmt(me.Pe/1e3, 3)} kW · η_motor ${fmt(me.eta_m*100, 0)} %`, st('Pe')),
+    kpi('Battery current', m.Ib != null ? M : T, fmt(m.Ib != null ? m.Ib : me.Ib, 1), ' A', `EST ${fmt(me.Ib, 1)} A · phase ${fmt(me.Iq, 0)} A`, st('I')),
+    kpi('Surge margin', T, fmt(e.SM*100, 1), ' %', S.surge > 0 ? 'SURGE' : e.SM < 0.03 ? 'close to surge' : 'stable', S.surge > 0 ? 'alarm' : e.SM < 0.03 ? 'warn' : 'ok'),
+    kpi('Motor winding', T, fmt(S.motEst.Tw, 0), ' °C', `steady ${fmt(mot.steady, 0)} °C (limit ${MOTOR.Tlim})`, S.motEst.Tw > MOTOR.Tlim ? 'alarm' : mot.steady > MOTOR.Tlim ? 'warn' : 'ok'),
+    kpi('PLA casing max', T, fmt(casMax, 1), ' °C', `steady ${fmt(cas.steady, 1)} °C (limit ${PLA_LIMIT})`, casMax > PLA_LIMIT ? 'alarm' : cas.steady > PLA_LIMIT ? 'warn' : 'ok'),
+    kpi('Time to a thermal limit', T, isFinite(ttl) ? fmt(ttl/60, 1) : 'none', isFinite(ttl) ? ' min' : '', isFinite(ttl) ? (cas.t < mot.t ? 'PLA casing reaches 55 °C' : 'motor winding reaches limit') : 'steady state stays below the limits', isFinite(ttl) ? (ttl < 300 ? 'alarm' : 'warn') : 'ok'),
+  ].join('');
+  $('#kpis').innerHTML = html;
+  // deviation table
+  $('#dev-table tbody').innerHTML = S.devRows.map(([name, ev, mv, d, key, z]) => {
+    const c = S.cus[key] || {hi: 0, lo: 0}, cu = Math.min(Math.max(c.hi, c.lo)/CUSUM_H, 1), s = status(key);
+    const dlt = mv - ev;
+    return `<tr><td>${name}</td><td>${fmt(ev, d)}</td><td>${fmt(mv, d)}</td><td>${(dlt >= 0 ? '+' : '') + fmt(dlt, d)}</td><td style="color:var(--${s === 'ok' ? 'ink-2' : s})">${fmt(z, 1)}</td><td><span class="cus" title="CUSUM ${fmt(Math.max(c.hi, c.lo), 1)}"><i style="width:${(cu*100).toFixed(0)}%;background:var(--${cu >= 1 ? 'alarm' : 'warn'})"></i></span></td></tr>`;
+  }).join('');
+  const kf = S.kf, h2 = i => 2*Math.sqrt(kf.P[i]);
+  $('#health').innerHTML = `<div><span>h<sub>p</sub> (pressure)</span><b>${fmt(kf.x[0], 4)}</b><span>± ${fmt(h2(0), 4)} (2σ) · base ${fmt(S.base.p, 3)}</span></div>
+    <div><span>h<sub>T</sub> (temperature)</span><b>${fmt(kf.x[1], 4)}</b><span>± ${fmt(h2(1), 4)} (2σ) · base ${fmt(S.base.t, 3)}</span></div>
+    <div><span>efficiency factor</span><b>${fmt(kf.x[0]/kf.x[1], 4)}</b><span>≈ h<sub>p</sub>/h<sub>T</sub>${S.bellmouth ? ` · h<sub>m</sub> ${fmt(kf.x[2], 3)}` : ''}</span></div>`;
+  const al = S.alarms;
+  $('#alarms').innerHTML = al.length ? al.map(([lvl, t]) => `<div class="alarm-item ${lvl}">${esc(t)}</div>`).join('') : '<div class="alarm-item ok">All channels agree with the healthy twin within their uncertainty.</div>';
+  const worst = al.some(a => a[0] === 'alarm') ? 'alarm' : al.some(a => a[0] === 'warn') ? 'warn' : 'ok';
+  const chip = $('#anom-chip'); chip.className = 'chip ' + worst; chip.textContent = worst === 'alarm' ? 'Anomaly' : worst === 'warn' ? 'Watch' : 'Nominal';
+  const b = [];
+  if (S.surge > 0) b.push('<span class="chip alarm">SURGE</span>');
+  if (e.extrap && m.N > 1000) b.push('<span class="chip warn">Extrapolating</span>');
+  if (S.source === 'rig' && S.fault !== 'none' && S.sev > 0) b.push(`<span class="chip warn">Fault injected: ${esc(FAULTS[S.fault].label)}</span>`);
+  if (S.source === 'replay') b.push(`<span class="chip info">Replay: ${esc(S.replay.name)}</span>`);
+  $('#sim-banner').innerHTML = b.join('');
+}
+
+/* ------------------------------------------------------------------ charts registry */
+const H_ = k => HIST.d[k];
+const CHARTS = {
+  'c-pr': () => ({xlabel: 'time (s)', ylabel: 'total pressure ratio', series: [
+    {x: H_('t'), y: H_('PRe'), color: 'est', label: 'EST (ROM)', width: 2},
+    {x: H_('t'), y: H_('PRm'), color: S.meas && S.meas.kind === 'meas' ? 'meas' : 'sim', label: S.meas && S.meas.kind === 'meas' ? 'MEAS' : 'SIM', width: 1.2},
+    {x: H_('t'), y: H_('PRset'), color: 'ink', dash: [5, 4], label: 'set point', width: 1}]}),
+  'c-n': () => ({xlabel: 'time (s)', ylabel: 'speed (rpm)', y0zero: true, series: [
+    {x: H_('t'), y: H_('Ncmd'), color: 'warn', dash: [6, 4], label: 'motor command', width: 1.5},
+    {x: H_('t'), y: H_('N'), color: S.meas && S.meas.kind === 'meas' ? 'meas' : 'sim', label: 'measured speed', width: 1.6}]}),
+  'c-t': () => ({xlabel: 'time (s)', ylabel: 'temperature (°C)', series: [
+    {x: H_('t'), y: H_('Tm'), color: S.meas && S.meas.kind === 'meas' ? 'meas' : 'sim', label: 'outlet T₀ sensor', width: 1.4},
+    {x: H_('t'), y: H_('Te'), color: 'est', label: 'outlet T₀ EST', width: 2, dash: [4, 3]},
+    {x: H_('t'), y: H_('Tcas'), color: 'warn', label: 'PLA casing max EST', width: 1.6},
+    {x: H_('t'), y: H_('Tw'), color: 'alarm', label: 'motor winding EST', width: 1.6}]}),
+  'c-p': () => ({xlabel: 'time (s)', ylabel: 'power (W)', y0zero: true, y2: {label: 'battery current (A)'}, series: [
+    {x: H_('t'), y: H_('Pe_e'), color: 'est', label: 'P_el EST', width: 2},
+    {x: H_('t'), y: H_('Pe_m'), color: S.meas && S.meas.kind === 'meas' ? 'meas' : 'sim', label: 'P_el measured', width: 1.2},
+    {x: H_('t'), y: H_('Psh'), color: 'des', label: 'shaft EST', width: 1.4, dash: [5, 3]},
+    {x: H_('t'), y: H_('Ib_m'), color: 'ink-3', label: 'I_batt', width: 1, axis2: true}]}),
+  'c-map': () => mapSpec(),
+  'c-ax': () => axialSpec(),
+  'c-kf': () => ({xlabel: 'time (s)', ylabel: 'health factor (–)', hlines: [{y: 1, color: 'des', label: 'design'}], series: [
+    {x: H_('t'), y: H_('hp'), color: 'est', label: 'h_p ±2σ', width: 1.8, band: {lo: H_('hp').map((v, i) => v - H_('hpS')[i]), hi: H_('hp').map((v, i) => v + H_('hpS')[i])}},
+    {x: H_('t'), y: H_('ht'), color: 'alarm', label: 'h_T ±2σ', width: 1.8, band: {lo: H_('ht').map((v, i) => v - H_('htS')[i]), hi: H_('ht').map((v, i) => v + H_('htS')[i])}}]}),
+};
+function mapSpec(){
+  const ser = [];
+  MAP.lines.forEach((l, i) => {
+    const st = l.s.map((s, j) => s ? l.PR[j] : null), un = l.s.map((s, j) => !s || (j + 1 < l.s.length && !l.s[j + 1]) || (j > 0 && !l.s[j - 1] && s) ? l.PR[j] : null);
+    ser.push({x: l.m, y: st, color: 'ink-3', width: 1.1}); ser.push({x: l.m, y: l.s.map((s, j) => !s ? l.PR[j] : null), color: 'ink-3', width: 1, dash: [3, 3]});
+    const k = l.s.lastIndexOf(1); ser.push({x: [l.m[l.m.length - 1]], y: [l.PR[l.PR.length - 1]], color: 'ink-3', line: false, marker: null, labels: [`${l.N/1000}k`]});
+  });
+  ser.push({x: MAP.surge.m, y: MAP.surge.PR, color: 'alarm', width: 2, label: 'surge line'});
+  const e = S.est;
+  if (e){
+    const th = Math.sqrt(e.TaK/REF.T), dl = e.PaPa/REF.P, ol = {x: [], y: []};
+    for (let N = 6000; N <= 23000; N += 500){ const r = romPredict(N, e.phi); ol.x.push(r.m); ol.y.push(r.PR); }
+    ser.push({x: ol.x, y: ol.y, color: 'est', dash: [2, 3], width: 1.4, label: `operating line, valve ${(e.phi*100).toFixed(0)} %`});
+    ser.push({x: [e.m*th/dl], y: [1 + S.base.p*(e.PR - 1)], color: 'est', line: false, marker: 'o', msize: 5, label: 'EST point'});
+    const m = S.meas; if (m && m.Pout != null){ const mm = (m.m != null ? m.m : e.mb)*th/dl; ser.push({x: [mm], y: [m.Pout/m.Pa], color: m.kind === 'meas' ? 'meas' : 'sim', line: false, marker: 'd', msize: 4.5, label: m.m != null ? 'measured' : 'measured PR at EST flow'}); }
+  }
+  ser.push({x: [ROM.design.m], y: [ROM.design.PR], color: 'des', line: false, marker: 's', msize: 4, label: 'design'});
+  return {xlabel: 'corrected mass flow (kg/s)', ylabel: 'total pressure ratio', x: [0.06, 0.25], y: [1.0, 1.17], series: ser};
+}
+const DES_EST = romPredict(20000, 1.0);
+function axialSpec(){
+  const e = S.est, xs = [...Array(NS).keys()], names = ROM.stations;
+  const ser = [];
+  if (e){ ser.push({x: xs, y: e.P0.map(v => (v - e.PaPa)/1e3), color: 'est', marker: 'o', width: 2, label: 'ΔP₀ (kPa) EST'});
+          ser.push({x: xs, y: e.T0.map(v => v - e.TaK), color: 'alarm', marker: 's', width: 2, label: 'ΔT₀ (K) EST'});
+          ser.push({x: xs, y: e.p.map(v => (v - e.PaPa)/1e3), color: 'sim', marker: 'd', width: 1.2, dash: [4, 3], label: 'Δp static (kPa)'}); }
+  ser.push({x: xs, y: DES_EST.P0.map(v => (v - DES_EST.PaPa)/1e3), color: 'des', dash: [5, 4], width: 1.2, label: 'design ΔP₀'});
+  return {xlabel: 'station', ylabel: 'rise above inlet', x: [-0.2, 8.2], xticks: 8, xfmt: v => (names[Math.round(v)] || '').replace(' exit', ''), series: ser};
+}
+function fitCanvas(cv){
+  const r = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (r.width < 10) return null;
+  const w = Math.round(r.width*dpr), h = Math.round(r.height*dpr);
+  if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return [ctx, r.width, r.height];
+}
+function renderCharts(force){
+  if (VIEW === 'twin'){
+    Object.keys(CHARTS).forEach(id => { const f = fitCanvas($('#' + id)); if (f) plot(f[0], f[1], f[2], TOK, CHARTS[id]()); });
+    const f = fitCanvas($('#c-tri')); if (f) drawTriangles(f[0], f[1], f[2], TOK, +$('#tri-stage').value);
+  }
+  if (VIEW === 'compare' && force){ renderDatasetCharts(); renderOpTable(); }
+  if (VIEW === 'compare' && !force) renderOpTable();
+  if (VIEW === 'rom' && force) Object.keys(ROMCHARTS).forEach(id => { const f = fitCanvas($('#' + id)); if (f) plot(f[0], f[1], f[2], TOK, ROMCHARTS[id]()); });
+}
+$('#tri-stage').addEventListener('change', () => renderCharts());
+
+/* ------------------------------------------------------------------ main loop */
+let lastT = performance.now(), acc = 0, lastUI = 0;
+const simCv = $('#sim');
+function frame(now){
+  const dtR = Math.min((now - lastT)/1000, 0.1); lastT = now;
+  if (S.running){ acc += dtR*S.speed; let n = 0; while (acc >= DT && n < 700){ step(); acc -= DT; n++; } if (n >= 700) acc = 0; }
+  if (VIEW === 'twin'){ const f = fitCanvas(simCv); if (f) drawSim(f[0], f[1], f[2], TOK, S.running ? dtR : 0); }
+  if (now - lastUI > 250){ lastUI = now; $('#clock').textContent = `t = ${S.t.toFixed(1)} s`; if (VIEW === 'twin') renderKPIs(); renderCharts(false); }
+  requestAnimationFrame(frame);
+}
+
+/* ------------------------------------------------------------------ design reference */
+const DESIGN_FIELDS = [['stages', 'Number of stages', ''], ['N_rpm', 'Design speed', 'rpm'], ['PR', 'Total pressure ratio', ''], ['mdot_kg_s', 'Mass flow', 'kg/s'],
+  ['T_in_C', 'Inlet temperature', '°C'], ['P_in_kPa', 'Inlet pressure', 'kPa'], ['T_out_C', 'Outlet total temperature', '°C'], ['P_out_kPa', 'Outlet total pressure', 'kPa'],
+  ['dT0_K', 'Total temperature rise', 'K'], ['eta_stage', 'Stage efficiency', ''], ['eta_overall', 'Overall isentropic efficiency', ''], ['P_air_kW', 'Power to air', 'kW'],
+  ['P_shaft_kW', 'Shaft power', 'kW'], ['torque_Nm', 'Shaft torque', 'N·m'], ['Ca_m_s', 'Axial velocity', 'm/s'], ['hub_in_mm', 'Inlet hub diameter', 'mm'],
+  ['tip_mm', 'Tip diameter', 'mm'], ['hub_out_mm', 'Outlet hub diameter', 'mm'], ['rotor_blades', 'Rotor blades', ''], ['stator_vanes', 'Stator vanes', ''], ['surge_margin', 'Design surge margin', '']];
+const designValues = () => Object.assign({}, DESIGN_DEFAULT, REC.design || {});
+let designDirty = false;
+function renderDesignForm(){
+  if (designDirty) return;
+  const d = designValues();
+  $('#design-form').innerHTML = DESIGN_FIELDS.map(([k, l, u]) => `<div><label for="dz-${k}">${l}${u ? ` (${u})` : ''}</label><input type="text" id="dz-${k}" data-k="${k}" value="${esc(d[k])}"></div>`).join('');
+  $$('#design-form input').forEach(i => i.addEventListener('input', () => { designDirty = true; $('#design-status').textContent = 'Unsaved changes'; }));
+  if (!$('#design-status').textContent) $('#design-status').textContent = REC.design ? `Saved design reference${REC.design.saved_at ? ' · ' + new Date(REC.design.saved_at).toLocaleString() : ''}` : 'Showing the design calculation values.';
+}
+function readDesignForm(){ const o = {}; $$('#design-form input').forEach(i => { const v = i.value.trim(), n = Number(v); o[i.dataset.k] = v !== '' && isFinite(n) ? n : v; }); return o; }
+$('#design-save').addEventListener('click', async () => {
+  const o = readDesignForm(); o.saved_at = new Date().toISOString();
+  if (!CAP.db){ REC.design = o; designDirty = false; $('#design-status').textContent = 'Kept for this session (saving is not available in this view).'; return; }
+  try { await CAP.db.doc('design/reference').set(o); designDirty = false; $('#design-status').textContent = 'Saved.'; toast('Design reference saved'); }
+  catch (e){ $('#design-status').textContent = 'Could not save: ' + (e.message || e.code); }
+});
+$('#design-upload-btn').addEventListener('click', () => $('#design-file').click());
+$('#design-file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return; const txt = await f.text(); let o = {};
+  try { if (/^\s*[{[]/.test(txt)) o = JSON.parse(txt); else txt.split(/\r?\n/).forEach(l => { const [k, v] = l.split(/[,;\t]/); if (k && v !== undefined) o[k.trim()] = v.trim(); }); }
+  catch (err){ toast('Could not read the file: use JSON or two-column CSV (key,value)'); return; }
+  let n = 0; $$('#design-form input').forEach(i => { if (o[i.dataset.k] !== undefined){ i.value = o[i.dataset.k]; n++; } });
+  designDirty = true; $('#design-status').textContent = `${n} fields filled from ${f.name}. Review, then Save.`; e.target.value = '';
+});
+
+/* ------------------------------------------------------------------ operating-point table */
+function opRows(){
+  const d = designValues(), m = S.meas, e = S.est, me = S.mest; if (!m || !e) return {head: [], rows: []};
+  const PRm = m.Pout != null ? m.Pout/m.Pa : null, kind = m.kind === 'meas' ? 'MEAS' : 'SIM', Pe = m.Ib != null && m.Vb != null ? m.Ib*m.Vb : null;
+  const r = (q, u, des, est, meas, dd) => [q, u, des == null ? '–' : fmt(des, dd), fmt(est, dd), meas == null ? '–' : fmt(meas, dd), meas == null ? '–' : ((meas - est >= 0 ? '+' : '') + fmt(meas - est, dd))];
+  return {head: ['Quantity', 'Unit', 'Design [DES]', 'Expected now [EST]', `Measured [${kind}]`, 'Measured − expected'], rows: [
+    r('Rotational speed', 'rpm', d.N_rpm, m.N, m.N, 0),
+    r('Inlet temperature', '°C', d.T_in_C, m.TaC, m.TaC, 2),
+    r('Inlet pressure', 'kPa', d.P_in_kPa, m.Pa/1e3, m.Pa/1e3, 3),
+    r('Valve opening', '%', 100, m.phi*100, m.phi*100, 0),
+    r('Total pressure ratio', '–', d.PR, e.PRb, PRm, 4),
+    r('Outlet total pressure', 'kPa', d.P_out_kPa, e.PRb*m.Pa/1e3, m.Pout != null ? m.Pout/1e3 : null, 2),
+    r('Outlet total temperature', '°C', d.T_out_C, e.Toutb - 273.15, m.Tout != null ? m.Tout - 273.15 : null, 2),
+    r('Mass flow', 'kg/s', d.mdot_kg_s, e.mb, m.m, 4),
+    r('Isentropic efficiency', '–', d.eta_overall, e.eta, null, 4),
+    r('Power to air', 'kW', d.P_air_kW, e.Pshb*ETA_MECH/1e3, null, 3),
+    r('Shaft power', 'kW', d.P_shaft_kW, e.Pshb/1e3, null, 3),
+    r('Electrical power', 'kW', null, me.Pe/1e3, Pe != null ? Pe/1e3 : null, 3),
+    r('Battery current', 'A', null, me.Ib, m.Ib, 1),
+    r('Shaft torque', 'N·m', d.torque_Nm, me.tq, null, 3),
+    r('Surge margin', '–', d.surge_margin, e.SM, null, 3)]};
+}
+function tableHTML(t){ return `<thead><tr>${t.head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${t.rows.map(r => `<tr>${r.map((c, i) => `<td class="${i > 1 || typeof c === 'number' ? 'n' : ''}">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody>`; }
+function renderOpTable(){ $('#op-table').innerHTML = tableHTML(opRows()); }
+
+/* ------------------------------------------------------------------ datasets: parse, store, compare */
+const ALIAS = {t: ['time', 'times', 't', 'ts', 'timestamp', 'elapsed', 'elapseds', 'timesec'], N: ['rpm', 'n', 'speed', 'speedrpm', 'nrpm', 'motorrpm', 'shaftrpm'],
+  TaC: ['tamb', 'tambc', 'ambientt', 'tinc', 'tinlet', 'tinletc', 't01', 'tin', 'tambk', 'ambienttc'], Pa: ['pamb', 'pambkpa', 'pambpa', 'pambhpa', 'ambientp', 'pin', 'pinkpa', 'p01', 'pinlet'],
+  Tout: ['tout', 'toutc', 't0out', 'toutlet', 'toutletc', 't03', 'toutk'], Pout: ['pout', 'poutkpa', 'p0out', 'p0outkpa', 'poutlet', 'poutpa', 'pouthpa', 'poutletkpa', 'p0outletkpa'],
+  ps: ['poutstatic', 'poutstatickpa', 'pstatic', 'pouts', 'pstatickpa', 'poutstaticpa'], Ib: ['ibatt', 'ibatta', 'ibat', 'current', 'ia', 'iin', 'battcurrent'],
+  Vb: ['vbatt', 'vbattv', 'vbat', 'voltage', 'vin', 'battvoltage'], m: ['mdot', 'mdotkgs', 'massflow', 'massflowkgs'], phi: ['valve', 'valvepct', 'valveopening', 'throttle', 'phi', 'valve%']};
+const normH = h => h.toLowerCase().replace(/[^a-z0-9%]/g, '');
+const A_OUT = Math.PI*(0.0505*0.0505 - 0.03844*0.03844);
+function parseCSV(text, name, kind){
+  const lines = text.split(/\r?\n/).filter(l => l.trim() && !l.trim().startsWith('#'));
+  if (lines.length < 2) throw new Error('The file has no data rows.');
+  const delim = [',', ';', '\t'].map(d => [d, lines[0].split(d).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const head = lines[0].split(delim).map(h => h.trim().replace(/^"|"$/g, '')), nh = head.map(normH), map = {};
+  Object.entries(ALIAS).forEach(([k, al]) => { const i = nh.findIndex(h => al.includes(h)); if (i >= 0) map[k] = i; });
+  if (map.N == null) throw new Error('No speed column found (expected rpm).');
+  if (map.Pout == null && map.ps == null && map.Tout == null && map.Ib == null) throw new Error('No outlet pressure, outlet temperature or current column found.');
+  const unitP = k => { const h = nh[map[k]]; return h.includes('kpa') ? 1e3 : h.includes('hpa') ? 100 : h.endsWith('pa') ? 1 : null; };
+  const rows = []; let t0 = null;
+  for (let li = 1; li < lines.length; li++){
+    const c = lines[li].split(delim).map(v => v.trim().replace(/^"|"$/g, ''));
+    const num = k => map[k] == null ? null : (c[map[k]] === '' ? null : Number(c[map[k]]));
+    let t = num('t'); if (map.t != null && !isFinite(t)){ const d = Date.parse(c[map.t]); t = isFinite(d) ? d/1000 : null; }
+    if (t == null || !isFinite(t)) t = li - 1; if (t0 == null) t0 = t;
+    const P = k => { let v = num(k); if (v == null || !isFinite(v)) return null; const u = unitP(k); return u ? v*u : v < 300 ? v*1e3 : v < 3000 ? v*100 : v; };
+    const T = k => { const v = num(k); return v == null || !isFinite(v) ? null : v > 200 ? v - 273.15 : v; };
+    let phi = num('phi'); if (phi != null && phi > 3) phi /= 100;
+    const row = {t: t - t0, N: num('N'), TaC: T('TaC'), Pa: P('Pa'), Pout: P('Pout'), Tout: T('Tout'), Ib: num('Ib'), Vb: num('Vb'), m: num('m'), phi};
+    const ps = P('ps');
+    if (row.Pout == null && ps != null && row.N != null){ // static to total: P0 = p + rho C^2 / 2 with the ROM mass flow
+      const est = romPredict(row.N, phi || 1, (row.TaC ?? 15) + 273.15, row.Pa ?? 101325), rho = ps/(287*((row.Tout ?? 20) + 273.15)), C = est.m/(rho*A_OUT);
+      row.Pout = ps + 0.5*rho*C*C;
+    }
+    if (row.N != null && isFinite(row.N)) rows.push(row);
+  }
+  let kept = rows; if (rows.length > 1500){ const st = rows.length/1500; kept = Array.from({length: 1500}, (_, i) => rows[Math.floor(i*st)]); }
+  return {name, kind, uploaded_at: new Date().toISOString(), n_rows: rows.length, n_kept: kept.length, columns: Object.keys(map), rows: kept};
+}
+function currentDataset(){ const id = $('#ds-select').value; return allDatasets().find(d => d.id === id) || null; }
+function allDatasets(){ return REC.datasets.concat(REC.memDatasets); }
+function renderDatasetSelect(){
+  const sel = $('#ds-select'), cur = sel.value, all = allDatasets();
+  sel.innerHTML = all.length ? all.map(d => `<option value="${esc(d.id)}">${esc(d.name)} · ${d.kind === 'measured' ? 'MEAS' : 'SIM'} · ${d.n_rows} rows${d._mem ? ' (not saved)' : ''}</option>`).join('') : '<option value="">No datasets yet</option>';
+  if (all.some(d => d.id === cur)) sel.value = cur;
+  renderDatasetCharts();
+}
+$('#ds-select').addEventListener('change', () => renderDatasetCharts());
+async function storeDataset(ds, rawFile){
+  if (CAP.db && CAP.canWrite){
+    try {
+      if (rawFile && CAP.assets){ try { const a = await CAP.assets.upload(rawFile); ds.raw_asset_id = a.id; } catch (e) {} }
+      const ref = await CAP.db.collection('datasets').add(ds); toast(`Saved dataset “${ds.name}”`); setTimeout(() => { $('#ds-select').value = ref.id; renderDatasetCharts(); }, 400); return;
+    } catch (e){ toast('Could not save the dataset: ' + (e.code === 'quota_exceeded' ? 'storage is full, delete an old dataset' : (e.message || e.code))); }
+  }
+  ds.id = 'mem-' + Date.now(); ds._mem = true; REC.memDatasets.unshift(ds); renderDatasetSelect(); $('#ds-select').value = ds.id; renderDatasetCharts();
+}
+async function handleFile(f){
+  if (!f) return;
+  const kind = document.querySelector('input[name=kind]:checked').value;
+  try { const ds = parseCSV(await f.text(), f.name.replace(/\.[^.]+$/, ''), kind); await storeDataset(ds, f); $('#ds-info').textContent = `${ds.n_rows} rows read; columns: ${ds.columns.join(', ')}${ds.n_rows > ds.n_kept ? `; ${ds.n_kept} kept (evenly spaced)` : ''}`; }
+  catch (e){ toast(e.message); $('#ds-info').textContent = e.message; }
+}
+$('#pick-btn').addEventListener('click', () => $('#csv-file').click());
+$('#csv-file').addEventListener('change', e => { handleFile(e.target.files[0]); e.target.value = ''; });
+const drop = $('#drop');
+['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => handleFile(e.dataTransfer.files[0]));
+$('#ds-replay').addEventListener('click', () => { const ds = currentDataset(); if (ds) startReplay(ds); else toast('Choose a dataset first'); });
+$('#ds-delete').addEventListener('click', async () => {
+  const ds = currentDataset(); if (!ds) return;
+  const btn = $('#ds-delete');
+  if (btn.dataset.arm !== ds.id){ btn.dataset.arm = ds.id; btn.textContent = 'Click again to delete'; setTimeout(() => { btn.dataset.arm = ''; btn.textContent = 'Delete dataset'; }, 3500); return; }
+  btn.dataset.arm = ''; btn.textContent = 'Delete dataset';
+  if (ds._mem){ REC.memDatasets = REC.memDatasets.filter(d => d !== ds); renderDatasetSelect(); return; }
+  try { await CAP.db.doc('datasets/' + ds.id).delete(); toast('Dataset deleted'); } catch (e){ toast('Could not delete: ' + (e.message || e.code)); }
+});
+$('#tpl-btn').addEventListener('click', () => save('compressor_log_template.csv',
+  'time_s,rpm,T_amb_C,P_amb_kPa,T_out_C,P_out_kPa,I_batt_A,V_batt_V,mdot_kg_s,valve_pct\n# example of the format only; replace with your logged values\n0.0,0,25.0,100.90,25.0,100.90,0.0,30.8,,100\n0.1,1200,25.0,100.90,25.0,100.95,1.2,30.8,,100\n'));
+$('#example-btn').addEventListener('click', () => { const ds = generateExample(); storeDataset(ds, null); });
+function generateExample(){
+  const keep = JSON.parse(JSON.stringify({Nman: S.Nman, phi: S.phi, TaC: S.TaC, PaK: S.PaK, fault: S.fault, sev: S.sev, mode: S.mode, base: S.base, bellmouth: S.bellmouth}));
+  const save_ = {t: S.t, N: S.N, Ncmd: S.Ncmd, mot: {...S.mot}, motEst: {...S.motEst}, thA: S.thA.slice(), sens: {...S.sens}, kf: JSON.parse(JSON.stringify(S.kf)), cus: JSON.parse(JSON.stringify(S.cus)), hist: JSON.parse(JSON.stringify(HIST.d)), next: HIST.next, source: S.source, replay: S.replay, truth: S.truth, meas: S.meas, est: S.est, mest: S.mest, I: S.I};
+  Object.assign(S, {source: 'rig', mode: 'manual', TaC: 25, PaK: 100.9, fault: 'none', sev: 0, phi: 1.0, base: {p: 1, t: 1, m: 1}, bellmouth: true}); resetRig();
+  const plan = [[0, 12000, 1.0, 'none', 0], [30, 16000, 1.0, 'none', 0], [70, 20000, 1.0, 'none', 0], [110, 20000, 1.25, 'none', 0], [150, 18000, 0.97, 'none', 0], [190, 18000, 1.0, 'erosion', 0.6]];
+  const rows = [];
+  for (let k = 0; k < 2400; k++){
+    const t = k*DT; const p = plan.filter(q => q[0] <= t).pop(); S.Nman = p[1]; S.phi = p[2]; S.fault = p[3]; S.sev = p[4];
+    step(); const m = S.meas;
+    if (k % 5 === 0) rows.push({t: +t.toFixed(2), N: +m.N.toFixed(1), TaC: +m.TaC.toFixed(3), Pa: +m.Pa.toFixed(1), Pout: +m.Pout.toFixed(1), Tout: +(m.Tout - 273.15).toFixed(3), Ib: +m.Ib.toFixed(2), Vb: +m.Vb.toFixed(3), m: +m.m.toFixed(5), phi: m.phi});
+  }
+  Object.assign(S, keep, save_); HIST.d = save_.hist; HIST.next = save_.next;
+  return {name: 'Example log (virtual rig, 25 °C, blade erosion from 190 s)', kind: 'simulated', uploaded_at: new Date().toISOString(), n_rows: rows.length, n_kept: rows.length, columns: ['t', 'N', 'TaC', 'Pa', 'Pout', 'Tout', 'Ib', 'Vb', 'm', 'phi'], rows};
+}
+let DSCMP = null;
+function compareDataset(ds){
+  if (!ds) return null;
+  const out = ds.rows.map(r => {
+    const TaK = (r.TaC ?? S.TaC) + 273.15, Pa = r.Pa ?? S.PaK*1e3, phi = r.phi ?? 1.0, e = romPredict(r.N, phi, TaK, Pa), me = motorModel(r.N, e.Pshaft);
+    return {t: r.t, N: r.N, PRm: r.Pout != null ? r.Pout/Pa : null, PRe: e.PR, Tm: r.Tout, Te: e.Tout - 273.15, Ib: r.Ib, Ie: me.Ib, Pe: r.Ib != null && r.Vb != null ? r.Ib*r.Vb : null, Pee: me.Pe, m: r.m, me: e.m, Pout: r.Pout != null ? r.Pout/1e3 : null, Poute: e.PR*Pa/1e3};
+  });
+  const met = (k, ke, sel = r => r.N > 4000) => {
+    const p = out.filter(r => sel(r) && r[k] != null && isFinite(r[k])); if (p.length < 2) return null;
+    const e = p.map(r => r[k] - r[ke]), y = p.map(r => r[k]), ym = y.reduce((a, b) => a + b, 0)/y.length;
+    const sse = e.reduce((a, b) => a + b*b, 0), sst = y.reduce((a, b) => a + (b - ym)*(b - ym), 0);
+    return {n: p.length, rmse: Math.sqrt(sse/p.length), mae: e.reduce((a, b) => a + Math.abs(b), 0)/p.length, bias: e.reduce((a, b) => a + b, 0)/p.length, max: Math.max(...e.map(Math.abs)), r2: sst > 0 ? 1 - sse/sst : null};
+  };
+  return {rows: out, metrics: [['Pressure ratio', '–', met('PRm', 'PRe'), 5], ['Outlet total pressure', 'kPa', met('Pout', 'Poute'), 3], ['Outlet total temperature', '°C', met('Tm', 'Te'), 3],
+    ['Battery current', 'A', met('Ib', 'Ie', r => r.N > 1000), 2], ['Electrical power', 'W', met('Pe', 'Pee', r => r.N > 1000), 1], ['Mass flow', 'kg/s', met('m', 'me'), 5]].filter(m => m[2])};
+}
+function dsmTable(){
+  if (!DSCMP) return {head: [], rows: []};
+  const ds = currentDataset(), tag = ds && ds.kind === 'measured' ? 'MEAS' : 'SIM';
+  return {head: ['Channel', 'Unit', 'n', 'RMSE', 'MAE', `Bias (${tag} − EST)`, 'Max |error|', 'R²'], rows: DSCMP.metrics.map(([n, u, m, d]) => [n, u, m.n, fmt(m.rmse, d), fmt(m.mae, d), fmt(m.bias, d), fmt(m.max, d), m.r2 == null ? '–' : fmt(m.r2, 4)])};
+}
+const DSCHARTS = {
+  'd-pr': () => { const r = DSCMP ? DSCMP.rows : []; const k = dsKindColor(); return {xlabel: 'time (s)', ylabel: 'total pressure ratio', empty: 'Upload or generate a dataset', series: [
+    {x: r.map(q => q.t), y: r.map(q => q.PRe), color: 'est', width: 2, label: 'expected EST'}, {x: r.map(q => q.t), y: r.map(q => q.PRm), color: k, width: 1.1, label: k === 'meas' ? 'MEAS' : 'SIM'}]}; },
+  'd-t': () => { const r = DSCMP ? DSCMP.rows : []; const k = dsKindColor(); return {xlabel: 'time (s)', ylabel: 'outlet T₀ (°C)', empty: 'Upload or generate a dataset', series: [
+    {x: r.map(q => q.t), y: r.map(q => q.Te), color: 'est', width: 2, label: 'expected EST (steady)'}, {x: r.map(q => q.t), y: r.map(q => q.Tm), color: k, width: 1.1, label: k === 'meas' ? 'MEAS' : 'SIM'}]}; },
+  'd-par': () => { const r = DSCMP ? DSCMP.rows.filter(q => q.N > 4000 && q.PRm != null) : []; const k = dsKindColor(); const lo = 1.0, hi = Math.max(1.02, ...r.map(q => Math.max(q.PRm, q.PRe))) + 0.005;
+    return {xlabel: 'expected PR (EST)', ylabel: 'measured PR', x: [lo, hi], y: [lo, hi], empty: 'Upload or generate a dataset', series: [{x: [lo, hi], y: [lo, hi], color: 'des', dash: [5, 4], width: 1, label: 'y = x'}, {x: r.map(q => q.PRe), y: r.map(q => q.PRm), color: k, line: false, marker: 'o', msize: 2.2, label: k === 'meas' ? 'MEAS' : 'SIM'}]}; },
+  'd-i': () => { const r = DSCMP ? DSCMP.rows : []; const k = dsKindColor(); return {xlabel: 'time (s)', ylabel: 'battery current (A)', y0zero: true, empty: 'Upload or generate a dataset', series: [
+    {x: r.map(q => q.t), y: r.map(q => q.Ie), color: 'est', width: 2, label: 'expected EST'}, {x: r.map(q => q.t), y: r.map(q => q.Ib), color: k, width: 1.1, label: k === 'meas' ? 'MEAS' : 'SIM'}]}; },
+};
+function dsKindColor(){ const ds = currentDataset(); return ds && ds.kind === 'measured' ? 'meas' : 'sim'; }
+function renderDatasetCharts(){
+  const ds = currentDataset(); DSCMP = compareDataset(ds);
+  if (ds) $('#ds-info').textContent = `${ds.kind === 'measured' ? 'Measured' : 'Simulated'} · ${ds.n_rows} rows · uploaded ${new Date(ds.uploaded_at).toLocaleString()}${ds.raw_asset_id ? ' · raw file stored' : ''}`;
+  if (VIEW === 'compare') Object.keys(DSCHARTS).forEach(id => { const f = fitCanvas($('#' + id)); if (f) plot(f[0], f[1], f[2], TOK, DSCHARTS[id]()); });
+  const t = dsmTable(); $('#dsm-table').innerHTML = t.rows.length ? tableHTML(t) : '<tbody><tr><td class="empty">No dataset selected. Upload a CSV log or generate the simulated example.</td></tr></tbody>';
+}
+
+/* ------------------------------------------------------------------ experiment log */
+function entryFromLive(){
+  const m = S.meas, e = S.est, me = S.mest; if (!m || !e) return null;
+  return {test_id: $('#lg-test').value.trim() || `T-${String(REC.experiments.length + 1).padStart(3, '0')}`, operator: $('#lg-op').value.trim(),
+    source: m.kind === 'meas' ? 'measured' : 'simulated', origin: S.source === 'rig' ? 'virtual rig' : 'replay: ' + S.replay.name,
+    rpm: +m.N.toFixed(0), valve_pct: +(m.phi*100).toFixed(1), T_amb_C: +m.TaC.toFixed(2), P_amb_kPa: +(m.Pa/1e3).toFixed(3),
+    PR_meas: m.Pout != null ? +(m.Pout/m.Pa).toFixed(5) : null, PR_est: +e.PRb.toFixed(5), T_out_meas_C: m.Tout != null ? +(m.Tout - 273.15).toFixed(3) : null, T_out_est_C: +(e.Toutb - 273.15).toFixed(3),
+    I_batt_meas_A: m.Ib != null ? +m.Ib.toFixed(2) : null, I_batt_est_A: +me.Ib.toFixed(2), mdot_est_kg_s: +e.mb.toFixed(5), eta_est: +e.eta.toFixed(4), SM_est: +e.SM.toFixed(4),
+    h_p: +S.kf.x[0].toFixed(4), h_T: +S.kf.x[1].toFixed(4), fault: S.source === 'rig' && S.fault !== 'none' ? `${FAULTS[S.fault].label} ${Math.round(S.sev*100)} %` : '',
+    notes: $('#lg-notes').value.trim(), created_at: new Date().toISOString(), sim_time_s: +S.t.toFixed(1)};
+}
+async function addEntry(o){
+  if (CAP.db && CAP.canWrite){ try { await CAP.db.collection('experiments').add(o); toast('Entry logged'); return; } catch (e){ toast('Could not save: ' + (e.message || e.code)); return; } }
+  o.id = 'mem-' + Date.now(); REC.experiments.unshift(o); renderLog(); toast('Entry kept for this session');
+}
+$('#btn-logpt').addEventListener('click', () => { const o = entryFromLive(); if (o) addEntry(o); });
+$('#lg-fill').addEventListener('click', () => {
+  const o = entryFromLive(); if (!o) return;
+  $('#lg-n').value = o.rpm; $('#lg-phi').value = o.valve_pct; $('#lg-ta').value = o.T_amb_C; $('#lg-pa').value = o.P_amb_kPa;
+  $('#lg-pr').value = o.PR_meas ?? ''; $('#lg-to').value = o.T_out_meas_C ?? ''; $('#lg-i').value = o.I_batt_meas_A ?? ''; $('#lg-src').value = o.source;
+});
+$('#log-form').addEventListener('submit', ev => {
+  ev.preventDefault();
+  const n = +$('#lg-n').value, phi = (+$('#lg-phi').value || 100)/100, ta = $('#lg-ta').value === '' ? 15 : +$('#lg-ta').value, pa = $('#lg-pa').value === '' ? 101.325 : +$('#lg-pa').value;
+  if (!n){ $('#lg-status').textContent = 'Enter the speed.'; return; }
+  const e = romPredict(n, phi, ta + 273.15, pa*1e3), me = motorModel(n, e.Pshaft), num = id => $(id).value === '' ? null : +$(id).value;
+  addEntry({test_id: $('#lg-test').value.trim() || `T-${String(REC.experiments.length + 1).padStart(3, '0')}`, operator: $('#lg-op').value.trim(), source: $('#lg-src').value, origin: 'manual entry',
+    rpm: n, valve_pct: phi*100, T_amb_C: ta, P_amb_kPa: pa, PR_meas: num('#lg-pr'), PR_est: +e.PR.toFixed(5), T_out_meas_C: num('#lg-to'), T_out_est_C: +(e.Tout - 273.15).toFixed(3),
+    I_batt_meas_A: num('#lg-i'), I_batt_est_A: +me.Ib.toFixed(2), mdot_est_kg_s: +e.m.toFixed(5), eta_est: +e.eta.toFixed(4), SM_est: +e.SM.toFixed(4), h_p: null, h_T: null, fault: '',
+    notes: $('#lg-notes').value.trim(), created_at: new Date().toISOString()});
+  $('#lg-notes').value = '';
+});
+function logTable(){
+  return {head: ['Logged', 'Test', 'Operator', 'Source', 'Speed (rpm)', 'Valve (%)', 'T_amb (°C)', 'P_amb (kPa)', 'PR meas', 'PR EST', 'T_out meas (°C)', 'T_out EST (°C)', 'I_batt meas (A)', 'I_batt EST (A)', 'ṁ EST (kg/s)', 'η EST', 'SM EST', 'h_p', 'h_T', 'Fault injected', 'Notes'],
+    rows: REC.experiments.map(x => [new Date(x.created_at).toLocaleString(), x.test_id, x.operator || '', x.source === 'measured' ? 'MEAS' : 'SIM', x.rpm, x.valve_pct, x.T_amb_C, x.P_amb_kPa, x.PR_meas ?? '–', x.PR_est, x.T_out_meas_C ?? '–', x.T_out_est_C,
+      x.I_batt_meas_A ?? '–', x.I_batt_est_A, x.mdot_est_kg_s, x.eta_est, x.SM_est, x.h_p ?? '–', x.h_T ?? '–', x.fault || '', x.notes || ''])};
+}
+function renderLog(){
+  const t = logTable();
+  if (!t.rows.length){ $('#log-table').innerHTML = '<tbody><tr><td class="empty">No entries yet. Use “Log this point” on the live twin or fill the form above.</td></tr></tbody>'; return; }
+  $('#log-table').innerHTML = `<thead><tr>${t.head.map(h => `<th>${esc(h)}</th>`).join('')}<th></th></tr></thead><tbody>${REC.experiments.map((x, i) => `<tr>${t.rows[i].map((c, j) => `<td class="${j >= 4 && j <= 18 ? 'n' : ''}">${j === 3 ? `<span class="tag ${c === 'MEAS' ? 'meas' : 'sim'}">${c}</span>` : esc(typeof c === 'number' ? (Number.isInteger(c) ? c.toLocaleString() : c) : c)}</td>`).join('')}<td>${CAP.canWrite ? `<button class="btn sm danger" type="button" data-del="${esc(x.id)}">Delete</button>` : ''}</td></tr>`).join('')}</tbody>`;
+  $$('#log-table [data-del]').forEach(b => b.addEventListener('click', async () => {
+    if (b.dataset.arm !== '1'){ b.dataset.arm = '1'; b.textContent = 'Confirm'; setTimeout(() => { b.dataset.arm = ''; b.textContent = 'Delete'; }, 3000); return; }
+    const id = b.dataset.del;
+    if (id.startsWith('mem-')){ REC.experiments = REC.experiments.filter(x => x.id !== id); renderLog(); return; }
+    try { await CAP.db.doc('experiments/' + id).delete(); } catch (e){ toast('Could not delete: ' + (e.message || e.code)); }
+  }));
+}
+
+/* ------------------------------------------------------------------ checklist */
+const CK_STATES = ['needed', 'ordered', 'received', 'installed', 'calibrated'];
+function ckTable(){
+  return {head: ['Status', 'Component', 'Specification', 'Qty', 'Unit cost (USD)', 'Line cost (USD)', 'Category', 'Link'],
+    rows: REC.checklist.map(c => [c.status || 'needed', c.item, c.spec || '', c.qty ?? 1, c.unit_cost_usd != null ? fmt(c.unit_cost_usd, 2) : '–', c.unit_cost_usd != null ? fmt(c.unit_cost_usd*(c.qty || 1), 2) : '–', c.category || '', c.link || ''])};
+}
+function renderChecklist(){
+  const items = REC.checklist;
+  if (!items.length){ $('#ck-table').innerHTML = '<tbody><tr><td class="empty">No components yet. Add the first one below.</td></tr></tbody>'; $('#ck-sum').textContent = ''; $('#ck-bar').style.width = '0%'; return; }
+  const done = items.filter(c => ['installed', 'calibrated'].includes(c.status)).length, cost = items.reduce((a, c) => a + (c.unit_cost_usd || 0)*(c.qty || 1), 0), priced = items.filter(c => c.unit_cost_usd != null).length;
+  $('#ck-sum').textContent = `${done}/${items.length} installed or calibrated · known cost ${fmt(cost, 2)} USD (${priced} of ${items.length} priced)`;
+  $('#ck-bar').style.width = (100*done/items.length).toFixed(0) + '%';
+  $('#ck-table').innerHTML = `<thead><tr><th>Status</th><th>Component</th><th>Specification</th><th>Qty</th><th>Unit cost (USD)</th><th>Category</th><th>Link</th><th></th></tr></thead><tbody>${items.map(c => `<tr>
+    <td><select data-id="${esc(c.id)}" data-f="status" aria-label="Status of ${esc(c.item)}" style="width:auto" ${CAP.canWrite ? '' : 'disabled'}>${CK_STATES.map(s => `<option ${s === (c.status || 'needed') ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
+    <td><b>${esc(c.item)}</b>${c.notes ? `<div class="small faint">${esc(c.notes)}</div>` : ''}</td><td>${esc(c.spec || '')}</td><td class="n">${esc(c.qty ?? 1)}</td>
+    <td class="n"><input type="number" step="0.01" data-id="${esc(c.id)}" data-f="unit_cost_usd" value="${c.unit_cost_usd ?? ''}" aria-label="Unit cost of ${esc(c.item)}" style="width:90px" ${CAP.canWrite ? '' : 'disabled'}></td>
+    <td>${esc(c.category || '')}</td><td>${c.link ? `<a href="${esc(c.link)}" target="_blank" rel="noopener">open</a>` : ''}</td>
+    <td>${CAP.canWrite ? `<button class="btn sm danger" type="button" data-ckdel="${esc(c.id)}">Remove</button>` : ''}</td></tr>`).join('')}</tbody>`;
+  $$('#ck-table [data-f]').forEach(el => el.addEventListener('change', async () => {
+    const id = el.dataset.id, f = el.dataset.f, v = f === 'status' ? el.value : (el.value === '' ? null : +el.value);
+    const it = REC.checklist.find(c => c.id === id); if (it) it[f] = v;
+    if (CAP.db && !id.startsWith('mem-')){ try { await CAP.db.doc('checklist/' + id).update({[f]: v}); } catch (e){ toast('Could not save: ' + (e.message || e.code)); } } else renderChecklist();
+  }));
+  $$('#ck-table [data-ckdel]').forEach(b => b.addEventListener('click', async () => {
+    if (b.dataset.arm !== '1'){ b.dataset.arm = '1'; b.textContent = 'Confirm'; setTimeout(() => { b.dataset.arm = ''; b.textContent = 'Remove'; }, 3000); return; }
+    const id = b.dataset.ckdel;
+    if (id.startsWith('mem-') || !CAP.db){ REC.checklist = REC.checklist.filter(c => c.id !== id); renderChecklist(); return; }
+    try { await CAP.db.doc('checklist/' + id).delete(); } catch (e){ toast('Could not remove: ' + (e.message || e.code)); }
+  }));
+}
+$('#ck-form').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const o = {item: $('#ck-item').value.trim(), spec: $('#ck-spec').value.trim(), qty: +$('#ck-qty').value || 1, unit_cost_usd: $('#ck-cost').value === '' ? null : +$('#ck-cost').value,
+    category: $('#ck-cat').value, status: 'needed', order: REC.checklist.length ? Math.max(...REC.checklist.map(c => c.order || 0)) + 1 : 1, link: '', notes: ''};
+  if (!o.item) return;
+  if (CAP.db && CAP.canWrite){ try { await CAP.db.collection('checklist').add(o); } catch (e){ toast('Could not save: ' + (e.message || e.code)); return; } }
+  else { o.id = 'mem-' + Date.now(); REC.checklist.push(o); renderChecklist(); }
+  $('#ck-form').reset(); $('#ck-qty').value = 1; toast('Component added');
+});
+
+/* ------------------------------------------------------------------ ROM page */
+function romTable(){
+  const M = ROM.metrics, row = (n, u, k, s = 1, d = 5) => [n, u, fmt(M.test[k].RMSE*s, d), fmt(M.test[k].MAE*s, d), fmt(M.test[k].max_abs*s, d), fmt(M.test[k].R2, 6), fmt(M.stress[k].max_abs*s, d)];
+  return {head: ['Output', 'Unit', 'RMSE (test)', 'MAE (test)', 'Max |error| (test)', 'R² (test)', 'Max |error| stress'], rows: [
+    row('Total pressure ratio', '–', 'PR'), row('Outlet total temperature', 'K', 'T_out_K', 1, 4), row('Outlet total pressure', 'kPa', 'P_out_kPa', 1, 4), row('Mass flow', 'kg/s', 'mdot_kg_s'),
+    row('Isentropic efficiency', '–', 'eta', 1, 4), row('Power to air', 'W', 'power_air_W', 1, 2), row('Surge margin', '–', 'SM', 1, 4),
+    ['Pressure ratio, Gaussian process', '–', fmt(M.test.PR_GP.RMSE, 5), fmt(M.test.PR_GP.MAE, 5), fmt(M.test.PR_GP.max_abs, 5), fmt(M.test.PR_GP.R2, 6), '–'],
+    ['Outlet temperature, Gaussian process', 'K', fmt(M.test.T_out_K_GP.RMSE, 4), fmt(M.test.T_out_K_GP.MAE, 4), fmt(M.test.T_out_K_GP.max_abs, 4), fmt(M.test.T_out_K_GP.R2, 6), '–']]};
+}
+function sweepTable(){ return {head: ['r', 'Energy captured', 'Basis-only error', 'ROM error', 'Max PR error', 'Max T_out error (K)'], rows: ROM.sweep.map(s => [s.r, fmt(s.energy, 7), fmt(s.proj_err, 5), fmt(s.rom_err, 5), fmt(s.PR_max, 5), fmt(s.Tout_max, 4)])}; }
+const ROMCHARTS = {
+  'r-sv': () => ({xlabel: 'mode index i', ylabel: 'log₁₀(σᵢ/σ₁)', xticks: 8, series: [{x: ROM.sigma.slice(0, 16).map((_, i) => i + 1), y: ROM.sigma.slice(0, 16).map(v => Math.log10(v/ROM.sigma[0])), color: 'est', marker: 'o', width: 1.5, label: 'singular values'},
+    {x: [ROM.r, ROM.r], y: [Math.log10(ROM.sigma[15]/ROM.sigma[0]), 0], color: 'warn', dash: [4, 3], width: 1.2, label: `r = ${ROM.r} kept`}]}),
+  'r-sw': () => ({xlabel: 'number of POD modes r', ylabel: 'log₁₀ relative field error', series: [
+    {x: ROM.sweep.map(s => s.r), y: ROM.sweep.map(s => Math.log10(s.proj_err)), color: 'des', marker: 's', width: 1.5, label: 'basis only (projection)'},
+    {x: ROM.sweep.map(s => s.r), y: ROM.sweep.map(s => Math.log10(s.rom_err)), color: 'est', marker: 'o', width: 2, label: 'ROM forecast (held-out)'}]}),
+  'r-md': () => ({xlabel: 'station', ylabel: 'mode entry (scaled)', x: [-0.2, 8.2], xticks: 8, xfmt: v => (ROM.stations[Math.round(v)] || '').replace(' exit', ''), series: ROM.V.map((v, j) => ({x: [...Array(NS).keys()], y: v.slice(0, NS), color: ['est', 'alarm', 'sim', 'warn'][j % 4], marker: 'o', width: 1.6, label: `mode ${j + 1}`}))}),
+  'r-par': () => { const p = ROM.points; const lo = 1.0, hi = 1.13; return {xlabel: 'FOM pressure ratio', ylabel: 'ROM pressure ratio', x: [lo, hi], y: [lo, hi], series: [{x: [lo, hi], y: [lo, hi], color: 'des', dash: [5, 4], width: 1, label: 'y = x'},
+    {x: p.test.PR, y: p.test_rom.PR, color: 'est', line: false, marker: 's', msize: 3.5, label: '15 test points'}, {x: p.stress.PR, y: p.stress_rom.PR, color: 'warn', line: false, marker: 'd', msize: 4, label: 'stress (outside range)'}]}; },
+  'r-doe': () => { const p = ROM.points; return {xlabel: 'speed (rpm)', ylabel: 'valve opening (–)', x: [5000, 25000], y: [0.9, 1.65], series: [
+    {x: p.train.N, y: p.train.phi, color: 'est', line: false, marker: 'o', hollow: true, label: '45 training'}, {x: p.test.N, y: p.test.phi, color: 'alarm', line: false, marker: 's', label: '15 test'},
+    {x: p.stress.N, y: p.stress.phi, color: 'warn', line: false, marker: 'd', msize: 4.5, label: 'stress'}, {x: [10000, 20000, 20000, 10000, 10000], y: [0.94, 0.94, 1.5, 1.5, 0.94], color: 'des', dash: [4, 3], width: 1, label: 'training domain'}]}; },
+  'r-th': () => { const q = ROM.thermal_test; return {xlabel: 'time (s)', ylabel: 'max casing temperature rise (K)', y0zero: true, y2: {label: 'gas ΔT₀ input (K)'}, series: [
+    {x: q.t, y: q.fom_max, color: 'des', width: 3, label: 'FOM (40 nodes)'}, {x: q.t, y: q.rom_max, color: 'est', width: 1.5, dash: [5, 3], label: `OpInf ROM (r = ${ROM.thermal.info.r})`}, {x: q.t, y: q.dT, color: 'ink-3', width: 1, axis2: true, label: 'input ΔT₀'}]}; },
+};
+function renderRomPage(){
+  const M = ROM.metrics, th = ROM.thermal.info, tm = ROM.timing;
+  const steps = [
+    ['Full-order model (Module 02d)', 'Mean-line stage stacking of the real blade geometry: continuity at every station, Euler work ΔT₀ = λU(C<sub>u2</sub> − C<sub>u1</sub>)/c<sub>p</sub>, loss bucket calibrated to η<sub>s</sub> = 0.70, outlet valve as a nozzle. It reproduces the design point exactly (PR 1.1200, 301.77 K) and costs ' + tm.fom_s.toFixed(2) + ' s per operating point.'],
+    ['Design of experiments (Module 02a)', '60-point Latin hypercube over speed 10,000–20,000 rpm and valve opening 0.94–1.50 (seed 2026), split 45 training / 15 test, plus 5 stress points outside the domain.'],
+    ['Multi-variable snapshots (Modules 02b, 02c; wake notebook)', 'Each snapshot holds 44 values: P₀, T₀, static p and axial Mach number at 9 stations, plus incidence and diffusion factor of the 4 rotors. Each variable group is centred and scaled to unit RMS. Pressure and temperature rises are divided by x² and Mach by x (similarity), so the ROM has the right zero-speed limit.'],
+    ['POD by SVD (cooling-strip notebook)', `σ₁…σ₄ = ${ROM.sigma.slice(0, 4).map(v => v.toFixed(3)).join(', ')}. ${ROM.r} modes capture ${(ROM.energy[ROM.r - 1]*100).toFixed(5)} % of the variance. r was chosen from captured energy and the held-out error, not energy alone.`],
+    ['Parametric ROM (surrogate of the amplitudes)', `Polynomials in (x, φ) map the operating point to the ${ROM.r} POD amplitudes; leave-one-out CV chose degrees ${ROM.amp.map(a => a.degree).join(', ')}. A Gaussian process was fitted for comparison (table). Online cost: ${tm.rom_python_us.toFixed(0)} µs in Python, about ${Math.round(tm.fom_s*1e6/tm.rom_python_us).toLocaleString()} times faster than the FOM.`],
+    ['Dynamic thermal ROM by operator inference', `40-node PLA-casing conduction and convection model, snapshot pairs from 4 random input histories, ${th.r} POD modes. Operators fitted from data: a<sub>k+1</sub> = A<sub>r</sub>a<sub>k</sub> + u₁N<sub>r</sub>a<sub>k</sub> + u₂b<sub>r</sub>. Their Galerkin cross-check gives ‖K<sub>data</sub> − K<sub>physics</sub>‖ = ${th.op_diff_data_vs_physics.toExponential(1)}. The held-out run has a maximum error of ${th.test_max_err_K.toFixed(3)} K; the casing time constant is ${th.tau_s.toFixed(0)} s.`],
+    ['Sensing and observability (Module 03a)', `With outlet P₀ and T₀ only, the ${ROM.r} amplitudes give rank ${ROM.observability.rank}: overall degradation is visible, but not which stage. Adding a mid-machine tap and a bellmouth inlet tap raises the rank to ${ROM.observability.rank_with_midtaps_and_bellmouth} (condition number ${ROM.observability.cond_with_midtaps_and_bellmouth.toFixed(1)}).`],
+    ['Synchronisation and use (Modules 03b, 04a)', 'A Kalman filter estimates health factors h<sub>p</sub> and h<sub>T</sub> from the measured pressure ratio and lagged outlet temperature. Residuals against the healthy baseline feed CUSUM drift tests. The adapted ROM feeds the motor speed command back to the rig.']];
+  $('#rom-steps').innerHTML = steps.map(([t, p]) => `<div class="step"><div><b>${t}</b><p>${p}</p></div></div>`).join('');
+  $('#romv-table').innerHTML = tableHTML(romTable());
+  $('#rom-note').innerHTML = `Field error on the test set: ${(M.test.field_rel_err*100).toFixed(2)} % (basis-only ${(M.test.field_proj_err*100).toFixed(2)} %), so most of the remaining error comes from the amplitude maps, not the basis. Outside the training domain the error grows (field ${(M.stress.field_rel_err*100).toFixed(1)} %), so the twin flags extrapolation.`;
+  setTimeout(() => renderCharts(true), 20);
+}
+
+/* ------------------------------------------------------------------ report pack: tables and figures */
+const TABLES = {
+  op: {title: 'Current operating point: design, expected and measured', get: opRows},
+  romv: {title: 'ROM accuracy on the 15 held-out test points', get: romTable},
+  sweep: {title: 'POD model-order study', get: sweepTable},
+  dsm: {title: 'Dataset agreement: measured vs expected', get: dsmTable},
+  log: {title: 'Experiment log', get: logTable},
+  ck: {title: 'Lab component checklist', get: ckTable},
+  design: {title: 'Design reference', get: () => { const d = designValues(); return {head: ['Quantity', 'Value', 'Unit'], rows: DESIGN_FIELDS.map(([k, l, u]) => [l, d[k], u])}; }},
+};
+const FIGS = {sim: 'Compressor simulation (current state)', 'c-pr': 'Pressure ratio vs time', 'c-n': 'Speed vs time', 'c-t': 'Temperatures vs time', 'c-p': 'Power and current vs time', 'c-map': 'Compressor map with operating point',
+  'c-ax': 'Axial distribution through the stages', 'c-tri': 'Velocity triangles', 'c-kf': 'Kalman-filter health factors', 'd-pr': 'Dataset: pressure ratio', 'd-t': 'Dataset: outlet temperature', 'd-par': 'Dataset: parity plot', 'd-i': 'Dataset: battery current',
+  'r-sv': 'POD spectrum', 'r-sw': 'Model-order study', 'r-md': 'POD modes', 'r-par': 'ROM parity on test points', 'r-doe': 'Design of experiments', 'r-th': 'Thermal ROM validation'};
+const toCSV = t => [t.head, ...t.rows].map(r => r.map(c => { const s = String(c ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }).join(',')).join('\n') + '\n';
+const toMD = (t, title) => `**${title}**\n\n| ${t.head.map(h => String(h).replace(/\|/g, '\\|')).join(' | ')} |\n|${t.head.map(() => '---').join('|')}|\n${t.rows.map(r => `| ${r.map(c => String(c ?? '').replace(/\|/g, '\\|')).join(' | ')} |`).join('\n')}\n`;
+const texEsc = s => String(s ?? '').replace(/\\/g, '\\textbackslash{}').replace(/([&%$#_{}])/g, '\\$1').replace(/~/g, '\\textasciitilde{}').replace(/\^/g, '\\^{}').replace(/−/g, '$-$').replace(/±/g, '$\\pm$').replace(/°/g, '\\textdegree{}').replace(/²/g, '$^2$').replace(/η/g, '$\\eta$').replace(/ṁ/g, '$\\dot m$').replace(/·/g, '$\\cdot$');
+const toTeX = (t, title) => `% ${title}\n\\begin{table}[htbp]\n\\centering\n\\caption{${texEsc(title)}}\n\\begin{tabular}{${t.head.map((_, i) => i === 0 ? 'l' : 'r').join('')}}\n\\toprule\n${t.head.map(texEsc).join(' & ')} \\\\\n\\midrule\n${t.rows.map(r => r.map(texEsc).join(' & ') + ' \\\\').join('\n')}\n\\bottomrule\n\\end{tabular}\n\\end{table}\n`;
+function exportTable(id, fmt_){
+  const T = TABLES[id], t = T.get(); if (!t.rows.length){ toast('This table is empty'); return; }
+  const base = id + '_' + new Date().toISOString().slice(0, 10);
+  if (fmt_ === 'csv') save(base + '.csv', toCSV(t), T.title);
+  if (fmt_ === 'md') save(base + '.md', toMD(t, T.title), T.title);
+  if (fmt_ === 'tex') copyText(toTeX(t, T.title), 'LaTeX table');
+}
+function figBlob(id){
+  const W = 1800, Hh = id === 'sim' ? 1058 : 1125, cv = document.createElement('canvas'); cv.width = W; cv.height = Hh;
+  const ctx = cv.getContext('2d');
+  if (id === 'sim') drawSim(ctx, W, Hh, PRINT, 0);
+  else if (id === 'c-tri') drawTriangles(ctx, W, Hh, PRINT, +$('#tri-stage').value, 2.6);
+  else { const spec = (CHARTS[id] || DSCHARTS[id] || ROMCHARTS[id])(); plot(ctx, W, Hh, PRINT, spec, 2.6); }
+  return new Promise(r => cv.toBlob(r, 'image/png'));
+}
+async function exportFig(id){ if (id.startsWith('d-')) DSCMP = compareDataset(currentDataset()); const b = await figBlob(id); save(`${id}_${new Date().toISOString().slice(0, 10)}.png`, b, FIGS[id]); }
+document.addEventListener('click', e => {
+  const f = e.target.closest('[data-export-fig]'); if (f){ exportFig(f.dataset.exportFig); return; }
+  const t = e.target.closest('[data-export-tbl]'); if (t){ openTableMenu(t, t.dataset.exportTbl); return; }
+  const r = e.target.closest('[data-rep]'); if (r){ const [kind, id, fm] = r.dataset.rep.split(':'); kind === 't' ? exportTable(id, fm) : exportFig(id); }
+});
+function openTableMenu(btn, id){
+  const old = document.querySelector('.tblmenu'); if (old) old.remove();
+  const m = document.createElement('span'); m.className = 'tblmenu row'; m.style.gap = '4px';
+  m.innerHTML = `<button class="btn sm" type="button" data-rep="t:${id}:csv">CSV</button><button class="btn sm" type="button" data-rep="t:${id}:md">Markdown</button><button class="btn sm" type="button" data-rep="t:${id}:tex">Copy LaTeX</button>`;
+  btn.after(m); setTimeout(() => { const off = ev => { if (!m.contains(ev.target) && ev.target !== btn){ m.remove(); document.removeEventListener('click', off); } }; document.addEventListener('click', off); }, 0);
+}
+function renderReport(){
+  $('#rep-tables').innerHTML = `<thead><tr><th>Table</th><th>Rows</th><th>Export</th></tr></thead><tbody>${Object.entries(TABLES).map(([id, T]) => { let n = 0; try { n = T.get().rows.length; } catch (e) {}
+    return `<tr><td>${esc(T.title)}</td><td class="n">${n}</td><td><span class="row" style="gap:4px;flex-wrap:wrap"><button class="btn sm" type="button" data-rep="t:${id}:csv">CSV</button><button class="btn sm" type="button" data-rep="t:${id}:md">Markdown</button><button class="btn sm" type="button" data-rep="t:${id}:tex">Copy LaTeX</button></span></td></tr>`; }).join('')}</tbody>`;
+  $('#rep-figs').innerHTML = `<thead><tr><th>Figure</th><th>Section</th><th>Export</th></tr></thead><tbody>${Object.entries(FIGS).map(([id, t]) => `<tr><td>${esc(t)}</td><td>${id === 'sim' || id.startsWith('c-') ? 'Live twin' : id.startsWith('d-') ? 'Design & data' : 'ROM & validation'}</td><td><button class="btn sm" type="button" data-rep="f:${id}">PNG</button></td></tr>`).join('')}</tbody>`;
+}
+
+/* ------------------------------------------------------------------ start */
+resetRig();
+renderLog(); renderChecklist(); renderDesignForm(); renderDatasetSelect();
+route();
+requestAnimationFrame(frame);
+
+</script>
+</body></html>

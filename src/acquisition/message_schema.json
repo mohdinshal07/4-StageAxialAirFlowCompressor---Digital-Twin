@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Team 12 compressor rig telemetry message (topic <prefix>/telemetry)",
+  "type": "object",
+  "required": ["asset_id", "boot_id", "seq", "t_event_utc", "source", "values", "units", "quality"],
+  "properties": {
+    "asset_id": {"type": "string", "description": "physical asset, e.g. C4-rig-01"},
+    "boot_id": {"type": "string", "description": "random id of this bridge run; a change means a restart"},
+    "seq": {"type": "integer", "minimum": 1, "description": "sequence number; gaps = lost messages, repeats = duplicates"},
+    "t_event_utc": {"type": "string", "format": "date-time", "description": "time the line was received (UTC, ISO 8601)"},
+    "source": {"enum": ["measured", "simulated"], "description": "never mix: simulated data must be labelled simulated"},
+    "values": {
+      "type": "object",
+      "required": ["T_amb_C", "P_amb_Pa", "T_out_C", "p_out_static_Pa", "N_rpm"],
+      "properties": {
+        "T_amb_C": {"type": "number"}, "P_amb_Pa": {"type": "number"}, "T_out_C": {"type": "number"},
+        "p_out_static_Pa": {"type": "number"}, "N_rpm": {"type": "number"}
+      }
+    },
+    "units": {"type": "object"},
+    "quality": {"enum": ["ok", "suspect"]}
+  }
+}

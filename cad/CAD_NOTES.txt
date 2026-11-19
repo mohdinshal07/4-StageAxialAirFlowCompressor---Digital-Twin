@@ -1,0 +1,81 @@
+4-STAGE AXIAL COMPRESSOR  (pi = 1.12, 20,000 rpm) - CAD MODEL, reference layout
+==========================================================================================
+Units mm. Shaft axis = global Z, flow towards +Z. Every part is modelled in assembly
+coordinates, so all parts drop into place when inserted at the origin.
+Part names, shapes and stacking follow the reference 4-stage assembly you supplied
+(module pitch 32 mm; stage stack 4 x 32 = 128 mm).
+
+FILES
+  Compressor_4stage_assembly.step   whole assembly (product tree with 40 parts, colours as reference)
+  parts_STEP/*.step              one STEP file per part
+  parts_STL/*.stl                mesh of every part (for the slicer)
+  Pictures/                      renders of the assembly, rotor 1, stator-casing 1, front frame, shaft
+  BuildCompressor_SolidWorks.bas macro: STEP parts -> SLDPRT (bodies combined) -> SLDASM  (untested)
+
+OPEN IN SOLIDWORKS (two ways)
+  A) File > Open > Compressor_4stage_assembly.step. SolidWorks builds an assembly and one part per
+     component; File > Save As keeps them as native SLDASM/SLDPRT.
+  B) Run the macro (Tools > Macro > Run) and choose this folder.
+  Parts with blades (R*_rotor, S*_stator_casing) and the frames/spools/shaft are multi-body: the hub or
+  casing body and each blade are separate closed solids that overlap by 0.6 mm. Merge them with
+  Insert > Features > Combine (Add) - the macro does this automatically - to get one solid per part
+  like the reference parts.
+
+KEY DIMENSIONS (from the design calculations PDF)
+  Rotor tip  Ø100 (tip corners on R50.0) / casing, frame and spool bore Ø101 -> 0.5 mm radial (1 mm diametral)
+  Stator vanes end 0.5 mm radially above the rotating hub (1 mm diametral)
+  Hub line   Ø75.00 at inlet -> Ø76.88 at outlet (constant tip, constant Ca)
+  Rotor blades per stage: 38, 40, 41, 19      Stator vanes per stage: 27, 39, 42, 26
+  Rotor: boss Ø31 with Ø25.2 bore and flat at x = 11.6 (D-bore), web 3 mm at z = 5..8, rim 3 mm
+  Shaft: Ø25, flat at x = 11.4 over z = 0..128, Ø20 threaded ends z = -30..-20 and 148..178
+  Bearings 7005 (25x47x12) in front/rear bearing frames, caps with 3 x M3, M20 lock nuts, spacers Ø32/Ø25.2 x 8
+  Tie rods 4 x M4 on R60 at 45/135/225/315 deg, z = -76..206; base plate 150 x 282 x 8 mm
+
+PARTS
+  R1_rotor                            40 bodies   PRINT (PLA)
+  S1_stator_casing                    28 bodies   PRINT (PLA)
+  R2_rotor                            42 bodies   PRINT (PLA)
+  S2_stator_casing                    40 bodies   PRINT (PLA)
+  R3_rotor                            43 bodies   PRINT (PLA)
+  S3_stator_casing                    43 bodies   PRINT (PLA)
+  R4_rotor                            21 bodies   PRINT (PLA)
+  S4_stator_casing                    27 bodies   PRINT (PLA)
+  front_bearing_frame                 10 bodies   PRINT (PLA)
+  front_bearing_cap                    1 body    PRINT (PLA)
+  front_bearing_7005_envelope          1 body    buy / machine
+  front_shaft_spacer                   1 body    PRINT (PLA)
+  front_M20_locknut_envelope           1 body    buy / machine
+  front_cap_M3_screw_1                 1 body    buy / machine
+  front_cap_M3_screw_2                 1 body    buy / machine
+  front_cap_M3_screw_3                 1 body    buy / machine
+  rear_bearing_frame                  10 bodies   PRINT (PLA)
+  rear_bearing_cap                     1 body    PRINT (PLA)
+  rear_bearing_7005_envelope           1 body    buy / machine
+  rear_shaft_spacer                    1 body    PRINT (PLA)
+  rear_M20_locknut_envelope            1 body    buy / machine
+  rear_cap_M3_screw_1                  1 body    buy / machine
+  rear_cap_M3_screw_2                  1 body    buy / machine
+  rear_cap_M3_screw_3                  1 body    buy / machine
+  shaft_steel_D25                      3 bodies   buy / machine
+  M4_tie_rod_1                         1 body    buy / machine
+  M4_tie_nut_1_1                       1 body    buy / machine
+  M4_tie_nut_1_2                       1 body    buy / machine
+  M4_tie_rod_2                         1 body    buy / machine
+  M4_tie_nut_2_1                       1 body    buy / machine
+  M4_tie_nut_2_2                       1 body    buy / machine
+  M4_tie_rod_3                         1 body    buy / machine
+  M4_tie_nut_3_1                       1 body    buy / machine
+  M4_tie_nut_3_2                       1 body    buy / machine
+  M4_tie_rod_4                         1 body    buy / machine
+  M4_tie_nut_4_1                       1 body    buy / machine
+  M4_tie_nut_4_2                       1 body    buy / machine
+  base_plate                           1 body    buy / machine
+  inlet_measurement_spool             11 bodies   PRINT (PLA)
+  outlet_measurement_spool            11 bodies   PRINT (PLA)
+
+PRINTING NOTES (PLA Basic)
+  Rotors: axis vertical, 4-5 perimeters, 100 % infill near the boss, fine layers (0.12 mm) for the blades.
+  Ream the rotor D-bore to a sliding fit on the shaft; balance each rotor.
+  Stator-casings, frames and spools: axis vertical, 30-40 % infill. Drill the Ø2 static-pressure tap
+  holes through the spool wall after printing (bosses are modelled). Base plate is 282 mm long:
+  print in two halves or cut it from aluminium / acrylic sheet.

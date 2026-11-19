@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ipynb_checkpoints/
+*.log
+.DS_Store
+Thumbs.db
+src/dashboard/dist/
+# large CAD exports: regenerate from STEP or download from the release
+cad/**/*.stl
+cad/Compressor_4stage_assembly.stl
